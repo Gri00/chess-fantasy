@@ -39,7 +39,7 @@ export default function LeaguesScreen() {
       const data = await leagueService.getMyLeagues();
       setLeagues(data);
     } catch (err) {
-      Alert.alert("Greška", "Nije moguće učitati lige");
+      Alert.alert("Error", "Failed to load leagues");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -52,7 +52,7 @@ export default function LeaguesScreen() {
 
   const handleCreate = async () => {
     if (!name || !teamName) {
-      Alert.alert("Greška", "Popuni sva polja");
+      Alert.alert("Error", "Please fill in all fields");
       return;
     }
     setCreating(true);
@@ -67,7 +67,10 @@ export default function LeaguesScreen() {
       setTeamName("");
       load();
     } catch (err: any) {
-      Alert.alert("Greška", err.response?.data?.error || "Neuspešno kreiranje");
+      Alert.alert(
+        "Error",
+        err.response?.data?.error || "Failed to create league",
+      );
     } finally {
       setCreating(false);
     }
@@ -75,7 +78,7 @@ export default function LeaguesScreen() {
 
   const handleJoin = async () => {
     if (!inviteCode || !joinTeamName) {
-      Alert.alert("Greška", "Popuni sva polja");
+      Alert.alert("Error", "Please fill in all fields");
       return;
     }
     setJoining(true);
@@ -86,7 +89,7 @@ export default function LeaguesScreen() {
       setJoinTeamName("");
       load();
     } catch (err: any) {
-      Alert.alert("Greška", err.response?.data?.error || "Nevažeći invite kod");
+      Alert.alert("Error", err.response?.data?.error || "Invalid invite code");
     } finally {
       setJoining(false);
     }
@@ -121,14 +124,14 @@ export default function LeaguesScreen() {
           />
         }
       >
-        <Text style={styles.title}>Moje lige</Text>
+        <Text style={styles.title}>My Leagues</Text>
 
         {leagues.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyIcon}>🏆</Text>
-            <Text style={styles.emptyText}>Nisi u nijednoj ligi</Text>
+            <Text style={styles.emptyText}>You are not in any leagues</Text>
             <Text style={styles.emptySubtext}>
-              Kreiraj novu ili se pridruži postojećoj
+              Create a new one or join an existing one
             </Text>
           </View>
         ) : (
@@ -177,13 +180,13 @@ export default function LeaguesScreen() {
           style={styles.joinBtn}
           onPress={() => setShowJoin(true)}
         >
-          <Text style={styles.joinBtnText}>+ Pridruži se</Text>
+          <Text style={styles.joinBtnText}>+ Join League</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.createBtn}
           onPress={() => setShowCreate(true)}
         >
-          <Text style={styles.createBtnText}>+ Kreiraj ligu</Text>
+          <Text style={styles.createBtnText}>+ Create League</Text>
         </TouchableOpacity>
       </View>
 
@@ -194,17 +197,17 @@ export default function LeaguesScreen() {
           style={styles.modalOverlay}
         >
           <View style={styles.modal}>
-            <Text style={styles.modalTitle}>Nova liga</Text>
+            <Text style={styles.modalTitle}>Create New League</Text>
             <TextInput
               style={styles.input}
-              placeholder="Naziv lige"
+              placeholder="League Name"
               placeholderTextColor="#666"
               value={name}
               onChangeText={setName}
             />
             <TextInput
               style={styles.input}
-              placeholder="Naziv tvog tima"
+              placeholder="Your Team Name"
               placeholderTextColor="#666"
               value={teamName}
               onChangeText={setTeamName}
@@ -226,7 +229,7 @@ export default function LeaguesScreen() {
                 <Text
                   style={{ color: "#000", fontSize: 16, fontWeight: "700" }}
                 >
-                  Kreiraj
+                  Create League
                 </Text>
               )}
             </TouchableOpacity>
@@ -234,7 +237,7 @@ export default function LeaguesScreen() {
               style={styles.cancelBtn}
               onPress={() => setShowCreate(false)}
             >
-              <Text style={styles.cancelText}>Otkaži</Text>
+              <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -247,10 +250,10 @@ export default function LeaguesScreen() {
           style={styles.modalOverlay}
         >
           <View style={styles.modal}>
-            <Text style={styles.modalTitle}>Pridruži se ligi</Text>
+            <Text style={styles.modalTitle}>Join League</Text>
             <TextInput
               style={styles.input}
-              placeholder="Invite kod (npr. CA8265DB)"
+              placeholder="Invite Code (e.g., CA8265DB)"
               placeholderTextColor="#666"
               value={inviteCode}
               onChangeText={setInviteCode}
@@ -259,7 +262,7 @@ export default function LeaguesScreen() {
             />
             <TextInput
               style={styles.input}
-              placeholder="Naziv tvog tima"
+              placeholder="Your Team Name"
               placeholderTextColor="#666"
               value={joinTeamName}
               onChangeText={setJoinTeamName}
@@ -281,7 +284,7 @@ export default function LeaguesScreen() {
                 <Text
                   style={{ color: "#000", fontSize: 16, fontWeight: "700" }}
                 >
-                  Pridruži se
+                  Join League
                 </Text>
               )}
             </TouchableOpacity>
@@ -289,7 +292,7 @@ export default function LeaguesScreen() {
               style={styles.cancelBtn}
               onPress={() => setShowJoin(false)}
             >
-              <Text style={styles.cancelText}>Otkaži</Text>
+              <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>

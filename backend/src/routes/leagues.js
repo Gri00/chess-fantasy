@@ -62,7 +62,7 @@ export default async function leagueRoutes(app) {
 
       if (leagueError) {
         app.log.error(leagueError);
-        return reply.code(500).send({ error: "Greška pri kreiranju lige" });
+        return reply.code(500).send({ error: "Error creating league" });
       }
 
       const { error: memberError } = await supabaseAdmin
@@ -72,7 +72,7 @@ export default async function leagueRoutes(app) {
       if (memberError) {
         app.log.error(memberError);
         await supabaseAdmin.from("leagues").delete().eq("id", league.id);
-        return reply.code(500).send({ error: "Greška pri kreiranju tima" });
+        return reply.code(500).send({ error: "Error creating team" });
       }
 
       return reply.code(201).send({ league });
@@ -111,7 +111,7 @@ export default async function leagueRoutes(app) {
       const { data, error, count } = await query;
       if (error) {
         app.log.error(error);
-        return reply.code(500).send({ error: "Greška pri dohvatanju liga" });
+        return reply.code(500).send({ error: "Error fetching leagues" });
       }
       return reply.send({
         leagues: data,
@@ -135,7 +135,7 @@ export default async function leagueRoutes(app) {
       .order("joined_at", { ascending: false });
     if (error) {
       app.log.error(error);
-      return reply.code(500).send({ error: "Greška pri dohvatanju liga" });
+      return reply.code(500).send({ error: "Error fetching leagues" });
     }
     return reply.send({ leagues: data });
   });
@@ -150,13 +150,15 @@ export default async function leagueRoutes(app) {
       .eq("id", id)
       .single();
     if (error || !league)
-      return reply.code(404).send({ error: "Liga nije pronađena" });
+      return reply.code(404).send({ error: "League not found" });
     if (league.league_type === "private") {
       const isMember = league.members.some(
         (m) => m.user.id === request.user.id,
       );
       if (!isMember && league.commissioner_id !== request.user.id)
-        return reply.code(403).send({ error: "Nemaš pristup ovoj ligi" });
+        return reply
+          .code(403)
+          .send({ error: "You don't have access to this league" });
     }
     return reply.send({ league });
   });
@@ -185,18 +187,18 @@ export default async function leagueRoutes(app) {
         .eq("invite_code", invite_code.toUpperCase())
         .single();
       if (leagueError || !league)
-        return reply.code(404).send({ error: "Nevažeći invite kod" });
+        return reply.code(404).send({ error: "Invalid invite code" });
       if (league.status !== "pending")
         return reply
           .code(400)
-          .send({ error: "Liga je već počela ili završena" });
+          .send({ error: "League has already started or ended" });
 
       const { count } = await supabaseAdmin
         .from("league_members")
         .select("*", { count: "exact", head: true })
         .eq("league_id", league.id);
       if (count >= league.max_teams)
-        return reply.code(400).send({ error: "Liga je popunjena" });
+        return reply.code(400).send({ error: "League is full" });
 
       const { data: existing } = await supabaseAdmin
         .from("league_members")
@@ -205,7 +207,9 @@ export default async function leagueRoutes(app) {
         .eq("user_id", request.user.id)
         .single();
       if (existing)
-        return reply.code(409).send({ error: "Već si član ove lige" });
+        return reply
+          .code(409)
+          .send({ error: "You are already a member of this league" });
 
       const { data: member, error: memberError } = await supabaseAdmin
         .from("league_members")
@@ -214,7 +218,7 @@ export default async function leagueRoutes(app) {
         .single();
       if (memberError) {
         app.log.error(memberError);
-        return reply.code(500).send({ error: "Greška pri pridruživanju" });
+        return reply.code(500).send({ error: "Error joining league" });
       }
 
       try {
@@ -226,13 +230,13 @@ export default async function leagueRoutes(app) {
         if (commissioner?.push_token) {
           await sendPushNotification(
             commissioner.push_token,
-            "Nova liga notifikacija! 🏆",
-            `${request.user.username} se pridružio tvojoj ligi!`,
+            "New league notification! 🏆",
+            `${request.user.username} joined your league!`,
             { league_id: league.id },
           );
         }
       } catch (err) {
-        app.log.error("[Push] Greška:", err);
+        app.log.error("[Push] Error:", err);
       }
 
       return reply.code(201).send({ member });
@@ -262,19 +266,21 @@ export default async function leagueRoutes(app) {
         .eq("id", id)
         .single();
       if (leagueError || !league)
-        return reply.code(404).send({ error: "Liga nije pronađena" });
+        return reply.code(404).send({ error: "League not found" });
       if (league.league_type !== "public")
-        return reply.code(403).send({ error: "Ova liga zahteva invite kod" });
+        return reply
+          .code(403)
+          .send({ error: "This league requires an invite code" });
       if (league.status !== "pending")
         return reply
           .code(400)
-          .send({ error: "Liga je već počela ili završena" });
+          .send({ error: "League has already started or ended" });
       const { count } = await supabaseAdmin
         .from("league_members")
         .select("*", { count: "exact", head: true })
         .eq("league_id", id);
       if (count >= league.max_teams)
-        return reply.code(400).send({ error: "Liga je popunjena" });
+        return reply.code(400).send({ error: "League is full" });
       const { data: existing } = await supabaseAdmin
         .from("league_members")
         .select("id")
@@ -282,7 +288,9 @@ export default async function leagueRoutes(app) {
         .eq("user_id", request.user.id)
         .single();
       if (existing)
-        return reply.code(409).send({ error: "Već si član ove lige" });
+        return reply
+          .code(409)
+          .send({ error: "You are already a member of this league" });
       const { data: member, error: memberError } = await supabaseAdmin
         .from("league_members")
         .insert({ league_id: id, user_id: request.user.id, team_name })
@@ -290,7 +298,7 @@ export default async function leagueRoutes(app) {
         .single();
       if (memberError) {
         app.log.error(memberError);
-        return reply.code(500).send({ error: "Greška pri pridruživanju" });
+        return reply.code(500).send({ error: "Error joining league" });
       }
       try {
         const { data: commissioner } = await supabaseAdmin
@@ -301,12 +309,12 @@ export default async function leagueRoutes(app) {
         if (commissioner?.push_token)
           await sendPushNotification(
             commissioner.push_token,
-            "Nova liga notifikacija! 🏆",
-            "Novi igrač se pridružio tvojoj ligi!",
+            "New league notification! 🏆",
+            "New player joined your league!",
             { league_id: id },
           );
       } catch (err) {
-        app.log.error("[Push] Greška:", err);
+        app.log.error("[Push] Error:", err);
       }
       return reply.code(201).send({ member });
     },
@@ -324,7 +332,9 @@ export default async function leagueRoutes(app) {
         .eq("user_id", request.user.id)
         .single();
       if (!membership)
-        return reply.code(403).send({ error: "Nisi član ove lige" });
+        return reply
+          .code(403)
+          .send({ error: "You are not a member of this league" });
       const { data, error } = await supabaseAdmin
         .from("league_standings")
         .select("*")
@@ -332,9 +342,7 @@ export default async function leagueRoutes(app) {
         .order("rank", { ascending: true });
       if (error) {
         app.log.error(error);
-        return reply
-          .code(500)
-          .send({ error: "Greška pri dohvatanju standings" });
+        return reply.code(500).send({ error: "Error fetching standings" });
       }
       return reply.send({ standings: data });
     },
@@ -373,7 +381,7 @@ export default async function leagueRoutes(app) {
       if (!league || league.commissioner_id !== request.user.id)
         return reply
           .code(403)
-          .send({ error: "Samo komisar može da menja ligu" });
+          .send({ error: "Only the commissioner can edit the league" });
       const allowed = [
         "name",
         "description",
@@ -396,7 +404,7 @@ export default async function leagueRoutes(app) {
         .single();
       if (error) {
         app.log.error(error);
-        return reply.code(500).send({ error: "Greška pri update-u" });
+        return reply.code(500).send({ error: "Error updating league" });
       }
       return reply.send({ league: data });
     },
@@ -413,20 +421,17 @@ export default async function leagueRoutes(app) {
         .eq("id", id)
         .single();
       if (league?.commissioner_id === request.user.id)
-        return reply
-          .code(400)
-          .send({
-            error:
-              "Komisar ne može da napusti ligu — prvo prenesi ulogu ili obrisi ligu",
-          });
+        return reply.code(400).send({
+          error:
+            "Commissioner cannot leave the league — please transfer the role or delete the league",
+        });
       const { error } = await supabaseAdmin
         .from("league_members")
         .delete()
         .eq("league_id", id)
         .eq("user_id", request.user.id);
-      if (error)
-        return reply.code(500).send({ error: "Greška pri napuštanju" });
-      return reply.send({ message: "Uspešno si napustio ligu" });
+      if (error) return reply.code(500).send({ error: "Error leaving league" });
+      return reply.send({ message: "You have successfully left the league" });
     },
   );
 }
