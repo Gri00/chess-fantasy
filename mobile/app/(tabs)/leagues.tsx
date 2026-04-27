@@ -194,20 +194,24 @@ export default function LeaguesScreen() {
       <Modal visible={showCreate} animationType="slide" transparent>
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.modalOverlay}
+          style={{
+            flex: 1,
+            justifyContent: "flex-end",
+            backgroundColor: "rgba(0,0,0,0.8)",
+          }}
         >
-          <View style={styles.modal}>
-            <Text style={styles.modalTitle}>Create New League</Text>
+          <View style={[styles.modal, { paddingBottom: 50 }]}>
+            <Text style={styles.modalTitle}>New League</Text>
             <TextInput
               style={styles.input}
-              placeholder="League Name"
+              placeholder="League name"
               placeholderTextColor="#666"
               value={name}
               onChangeText={setName}
             />
             <TextInput
               style={styles.input}
-              placeholder="Your Team Name"
+              placeholder="Your team name"
               placeholderTextColor="#666"
               value={teamName}
               onChangeText={setTeamName}
@@ -229,7 +233,7 @@ export default function LeaguesScreen() {
                 <Text
                   style={{ color: "#000", fontSize: 16, fontWeight: "700" }}
                 >
-                  Create League
+                  Create
                 </Text>
               )}
             </TouchableOpacity>
@@ -247,22 +251,28 @@ export default function LeaguesScreen() {
       <Modal visible={showJoin} animationType="slide" transparent>
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.modalOverlay}
+          style={{
+            flex: 1,
+            justifyContent: "flex-end",
+            backgroundColor: "rgba(0,0,0,0.8)",
+          }}
         >
-          <View style={styles.modal}>
+          <View style={[styles.modal, { paddingBottom: 50 }]}>
             <Text style={styles.modalTitle}>Join League</Text>
             <TextInput
               style={styles.input}
-              placeholder="Invite Code (e.g., CA8265DB)"
+              placeholder="Invite code (e.g. CA8265DB)"
               placeholderTextColor="#666"
               value={inviteCode}
-              onChangeText={setInviteCode}
+              onChangeText={(text) =>
+                setInviteCode(text.replace(/\s/g, "").toUpperCase())
+              }
               autoCapitalize="characters"
               maxLength={8}
             />
             <TextInput
               style={styles.input}
-              placeholder="Your Team Name"
+              placeholder="Your team name"
               placeholderTextColor="#666"
               value={joinTeamName}
               onChangeText={setJoinTeamName}
@@ -284,7 +294,7 @@ export default function LeaguesScreen() {
                 <Text
                   style={{ color: "#000", fontSize: 16, fontWeight: "700" }}
                 >
-                  Join League
+                  Join
                 </Text>
               )}
             </TouchableOpacity>
@@ -375,7 +385,8 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
-    paddingBottom: 40,
+    paddingBottom: 50,
+    minHeight: 300,
   },
   modalTitle: {
     fontSize: 20,

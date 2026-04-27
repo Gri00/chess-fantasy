@@ -42,7 +42,7 @@ export default function LoginScreen() {
       keyboardShouldPersistTaps="handled"
       bounces={false}
     >
-      <Text style={styles.logo}>♟ ChessFantasy</Text>
+      <Text style={styles.logo}>Fantasy Chess ♟</Text>
       <Text style={styles.subtitle}>Sign in to your account</Text>
 
       <TextInput
