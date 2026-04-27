@@ -9,6 +9,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from "react-native";
 import { Link } from "expo-router";
 import { useAuthStore } from "../../stores/useAuthStore";
@@ -35,61 +36,66 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
+    <ScrollView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      contentContainerStyle={styles.inner}
+      keyboardShouldPersistTaps="handled"
+      bounces={false}
     >
-      <View style={styles.inner}>
-        <Text style={styles.logo}>♟ ChessFantasy</Text>
-        <Text style={styles.subtitle}>Sign in to your account</Text>
+      <Text style={styles.logo}>♟ ChessFantasy</Text>
+      <Text style={styles.subtitle}>Sign in to your account</Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor="#666"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
+      <TextInput
+        style={styles.input}
+        placeholder="Email"
+        placeholderTextColor="#666"
+        value={email}
+        onChangeText={setEmail}
+        autoCapitalize="none"
+        keyboardType="email-address"
+      />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor="#666"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
+      <TextInput
+        style={styles.input}
+        placeholder="Password"
+        placeholderTextColor="#666"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+      />
 
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleLogin}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Sign in</Text>
-          )}
+      <TouchableOpacity
+        style={[styles.button, loading && styles.buttonDisabled]}
+        onPress={handleLogin}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>Sign in</Text>
+        )}
+      </TouchableOpacity>
+
+      <Link href="/(auth)/register" asChild>
+        <TouchableOpacity style={styles.linkBtn}>
+          <Text style={styles.linkText}>
+            Don't have an account? <Text style={styles.linkBold}>Sign up</Text>
+          </Text>
         </TouchableOpacity>
-
-        <Link href="/(auth)/register" asChild>
-          <TouchableOpacity style={styles.linkBtn}>
-            <Text style={styles.linkText}>
-              Don't have an account?{" "}
-              <Text style={styles.linkBold}>Register</Text>
-            </Text>
-          </TouchableOpacity>
-        </Link>
-      </View>
-    </KeyboardAvoidingView>
+      </Link>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#0f0f0f" },
-  inner: { flex: 1, justifyContent: "center", paddingHorizontal: 24 },
+  inner: {
+    flexGrow: 1,
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    paddingVertical: 60,
+    paddingBottom: 130,
+  },
   logo: {
     fontSize: 36,
     color: "#fff",

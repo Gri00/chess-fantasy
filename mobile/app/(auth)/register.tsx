@@ -9,6 +9,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from "react-native";
 import { Link } from "expo-router";
 import { useAuthStore } from "../../stores/useAuthStore";
@@ -40,70 +41,76 @@ export default function RegisterScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
+    <ScrollView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      contentContainerStyle={styles.inner}
+      keyboardShouldPersistTaps="handled"
+      bounces={false}
     >
-      <View style={styles.inner}>
-        <Text style={styles.logo}>♟ ChessFantasy</Text>
-        <Text style={styles.subtitle}>Create a new account</Text>
+      <Text style={styles.logo}>♟ ChessFantasy</Text>
+      <Text style={styles.subtitle}>Create a new account</Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Username"
-          placeholderTextColor="#666"
-          value={username}
-          onChangeText={setUsername}
-          autoCapitalize="none"
-        />
+      <TextInput
+        style={styles.input}
+        placeholder="Username"
+        placeholderTextColor="#666"
+        value={username}
+        onChangeText={setUsername}
+        autoCapitalize="none"
+      />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor="#666"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
+      <TextInput
+        style={styles.input}
+        placeholder="Email"
+        placeholderTextColor="#666"
+        value={email}
+        onChangeText={setEmail}
+        autoCapitalize="none"
+        keyboardType="email-address"
+      />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Password (min. 6 characters)"
-          placeholderTextColor="#666"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
+      <TextInput
+        style={styles.input}
+        placeholder="Password (min. 6 characters)"
+        placeholderTextColor="#666"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+      />
 
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleRegister}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Register</Text>
-          )}
+      <TouchableOpacity
+        style={[styles.button, loading && styles.buttonDisabled]}
+        onPress={handleRegister}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>Sign up</Text>
+        )}
+      </TouchableOpacity>
+
+      <Link href="/(auth)/login" asChild>
+        <TouchableOpacity style={styles.linkBtn}>
+          <Text style={styles.linkText}>
+            Already have an account?{" "}
+            <Text style={styles.linkBold}>Sign in</Text>
+          </Text>
         </TouchableOpacity>
-
-        <Link href="/(auth)/login" asChild>
-          <TouchableOpacity style={styles.linkBtn}>
-            <Text style={styles.linkText}>
-              Already have an account?{" "}
-              <Text style={styles.linkBold}>Sign in</Text>
-            </Text>
-          </TouchableOpacity>
-        </Link>
-      </View>
-    </KeyboardAvoidingView>
+      </Link>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#0f0f0f" },
-  inner: { flex: 1, justifyContent: "center", paddingHorizontal: 24 },
+  inner: {
+    flexGrow: 1,
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    paddingVertical: 60,
+    paddingBottom: 180,
+  },
   logo: {
     fontSize: 36,
     color: "#fff",

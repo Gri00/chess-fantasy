@@ -1,13 +1,22 @@
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
+import { useRouter } from "expo-router";
 import { useAuthStore } from "../../stores/useAuthStore";
 
 export default function ProfileScreen() {
   const { user, logout } = useAuthStore();
+  const router = useRouter();
 
   const handleLogout = () => {
-    Alert.alert("Sign out", "Are you sure?", [
+    Alert.alert("Sign Out", "Are you sure?", [
       { text: "Cancel", style: "cancel" },
-      { text: "Sign out", style: "destructive", onPress: logout },
+      {
+        text: "Sign Out",
+        style: "destructive",
+        onPress: async () => {
+          await logout();
+          router.replace("/(auth)/login");
+        },
+      },
     ]);
   };
 
@@ -32,7 +41,7 @@ export default function ProfileScreen() {
       </View>
 
       <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-        <Text style={styles.logoutText}>Sign out</Text>
+        <Text style={styles.logoutText}>Sign Out</Text>
       </TouchableOpacity>
     </View>
   );

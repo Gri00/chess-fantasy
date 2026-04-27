@@ -158,13 +158,13 @@ export default async function playerRoutes(app) {
           .send({ error: "You are not a member of this league" });
       }
 
-      // Dohvati sve drafted igrače u ovoj ligi
-      const { data: drafted } = await supabaseAdmin
+      // Za no_draft mod — dohvati samo igrače koje JA već imam
+      const { data: myRoster } = await supabaseAdmin
         .from("rosters")
-        .select("chess_player_id, league_members!inner(league_id)")
-        .eq("league_members.league_id", league_id);
+        .select("chess_player_id")
+        .eq("league_member_id", membership.id);
 
-      const draftedIds = drafted ? drafted.map((d) => d.chess_player_id) : [];
+      const draftedIds = myRoster ? myRoster.map((d) => d.chess_player_id) : [];
 
       let query = supabaseAdmin
         .from("chess_players")

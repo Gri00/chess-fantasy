@@ -434,4 +434,91 @@ export default async function leagueRoutes(app) {
       return reply.send({ message: "You have successfully left the league" });
     },
   );
+
+  // ─── IZBACI ČLANA (samo komisar) ────────────────────────────
+  app.delete(
+    "/:id/members/:userId",
+    {
+      onRequest: [authenticate],
+    },
+    async (request, reply) => {
+      const { id, userId } = request.params;
+
+      // Proveri da li je komisar
+      const { data: league } = await supabaseAdmin
+        .from("leagues")
+        .select("commissioner_id")
+        .eq("id", id)
+        .single();
+
+      if (!league || league.commissioner_id !== request.user.id) {
+        return reply
+          .code(403)
+          .send({ error: "Only the commissioner can remove members" });
+      }
+
+      // Komisar ne može da izbaci samog sebe
+      if (userId === request.user.id) {
+        return reply
+          .code(400)
+          .send({ error: "Commissioner cannot remove themselves" });
+      }
+
+      const { error } = await supabaseAdmin
+        .from("league_members")
+        .delete()
+        .eq("league_id", id)
+        .eq("user_id", userId);
+
+      if (error) {
+        return reply.code(500).send({ error: "Error removing member" });
+      }
+
+      return reply.send({ message: "Member removed successfully" });
+    },
+  );
+
+  // ─── OBRIŠI LIGU (samo komisar) ─────────────────────────────
+  app.delete(
+    "/:id",
+    {
+      onRequest: [authenticate],
+    },
+    async (request, reply) => {
+      const { id } = request.params;
+
+      const { data: league } = await supabaseAdmin
+        .from("leagues")
+        .select("commissioner_id, status")
+        .eq("id", id)
+        .single();
+
+      if (!league) {
+        return reply.code(404).send({ error: "League not found" });
+      }
+
+      if (league.commissioner_id !== request.user.id) {
+        return reply
+          .code(403)
+          .send({ error: "Only the commissioner can delete the league" });
+      }
+
+      if (league.status === "active") {
+        return reply
+          .code(400)
+          .send({ error: "Cannot delete an active league" });
+      }
+
+      const { error } = await supabaseAdmin
+        .from("leagues")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        return reply.code(500).send({ error: "Error deleting league" });
+      }
+
+      return reply.send({ message: "League deleted successfully" });
+    },
+  );
 }

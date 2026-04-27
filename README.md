@@ -31,6 +31,7 @@ npm run dev
 ```
 
 ### Environment varijable (`backend/.env`)
+
 ```env
 PORT=3000
 JWT_SECRET=...
@@ -84,20 +85,21 @@ supabase/migrations/20240005_seed_players.sql
 # Provjeri status promjena
 git status
 
-# Dodaj sve promjene
+# Dodaj sve promene
 git add .
 
 # Commit sa porukom
-git commit -m "feat: opis promjene"
+git commit -m "feat: opis promene"
 
 # Push na GitHub
 git push origin main
 
-# Pull najnovije promjene
+# Pull najnovije promene
 git pull origin main
 ```
 
 ### Konvencija za commit poruke
+
 ```
 feat: nova funkcionalnost
 fix: ispravka buga
@@ -164,15 +166,15 @@ curl -Method POST http://localhost:3000/players/roster/LEAGUE_ID `
 
 ## Tech stack
 
-| Layer | Tehnologija |
-|-------|-------------|
-| Mobile | React Native + Expo + TypeScript |
-| Routing | Expo Router |
-| State | Zustand |
-| Backend | Node.js + Fastify |
-| Baza | PostgreSQL (Supabase) |
-| Auth | Supabase Auth + JWT |
-| Push notif. | Expo Notifications + APNs |
-| Build | EAS Build |
+| Layer       | Tehnologija                      |
+| ----------- | -------------------------------- |
+| Mobile      | React Native + Expo + TypeScript |
+| Routing     | Expo Router                      |
+| State       | Zustand                          |
+| Backend     | Node.js + Fastify                |
+| Baza        | PostgreSQL (Supabase)            |
+| Auth        | Supabase Auth + JWT              |
+| Push notif. | Expo Notifications + APNs        |
+| Build       | EAS Build                        |
 
 ---

@@ -28,7 +28,6 @@ export default function RootLayout() {
   useEffect(() => {
     if (!isAuthenticated) return;
     registerForPushNotifications();
-    useNotificationListeners();
   }, [isAuthenticated]);
 
   return (

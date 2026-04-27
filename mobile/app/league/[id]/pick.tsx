@@ -12,7 +12,7 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { playerService } from "../../../services/players";
 
-const TIERS = ["Sve", "S", "A", "B", "C", "D"];
+const TIERS = ["All", "S", "A", "B", "C", "D"];
 
 const TIER_COLORS: Record<string, string> = {
   S: "#f59e0b",
@@ -28,7 +28,7 @@ export default function PickPlayerScreen() {
   const [players, setPlayers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [selectedTier, setSelectedTier] = useState("Sve");
+  const [selectedTier, setSelectedTier] = useState("All");
   const [adding, setAdding] = useState<string | null>(null);
 
   const load = useCallback(async () => {

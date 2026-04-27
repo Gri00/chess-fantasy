@@ -1,21 +1,25 @@
-import { create } from 'zustand'
-import { authService } from '../services/auth'
+import { create } from "zustand";
+import { authService } from "../services/auth";
 
 interface User {
-  id: string
-  username: string
-  display_name: string | null
-  avatar_url: string | null
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
 }
 
 interface AuthState {
-  user: User | null
-  isLoading: boolean
-  isAuthenticated: boolean
-  login: (email: string, password: string) => Promise<void>
-  register: (email: string, password: string, username: string) => Promise<void>
-  logout: () => Promise<void>
-  loadUser: () => Promise<void>
+  user: User | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  register: (
+    email: string,
+    password: string,
+    username: string,
+  ) => Promise<void>;
+  logout: () => Promise<void>;
+  loadUser: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -25,30 +29,30 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   loadUser: async () => {
     try {
-      const token = await authService.getToken()
+      const token = await authService.getToken();
       if (!token) {
-        set({ isLoading: false, isAuthenticated: false })
-        return
+        set({ isLoading: false, isAuthenticated: false });
+        return;
       }
-      const user = await authService.getMe()
-      set({ user, isAuthenticated: true, isLoading: false })
+      const user = await authService.getMe();
+      set({ user, isAuthenticated: true, isLoading: false });
     } catch {
-      set({ isLoading: false, isAuthenticated: false })
+      set({ isLoading: false, isAuthenticated: false });
     }
   },
 
   login: async (email, password) => {
-    const data = await authService.login(email, password)
-    set({ user: data.user, isAuthenticated: true })
+    const data = await authService.login(email, password);
+    set({ user: data.user, isAuthenticated: true });
   },
 
   register: async (email, password, username) => {
-    const data = await authService.register(email, password, username)
-    set({ user: data.user, isAuthenticated: true })
+    const data = await authService.register(email, password, username);
+    set({ user: data.user, isAuthenticated: true });
   },
 
   logout: async () => {
-    await authService.logout()
-    set({ user: null, isAuthenticated: false })
-  }
-}))
+    await authService.logout();
+    set({ user: null, isAuthenticated: false, isLoading: false });
+  },
+}));

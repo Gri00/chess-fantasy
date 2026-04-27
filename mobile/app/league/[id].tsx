@@ -192,9 +192,7 @@ export default function LeagueDetailScreen() {
                   <View
                     style={[
                       styles.tierBadge,
-                      {
-                        backgroundColor: TIER_COLORS[item.tier] + "22",
-                      },
+                      { backgroundColor: TIER_COLORS[item.tier] + "22" },
                     ]}
                   >
                     <Text
@@ -212,7 +210,47 @@ export default function LeagueDetailScreen() {
                       {item.title} · {item.country_code} · {item.fide_rating}
                     </Text>
                   </View>
-                  <Text style={styles.playerRating}>{item.fide_rating}</Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      Alert.alert(
+                        "Remove Player",
+                        `Remove ${item.full_name} from your team?`,
+                        [
+                          { text: "Cancel", style: "cancel" },
+                          {
+                            text: "Remove",
+                            style: "destructive",
+                            onPress: async () => {
+                              try {
+                                await playerService.removeFromRoster(
+                                  id,
+                                  item.chess_player_id,
+                                );
+                                load();
+                              } catch (err: any) {
+                                Alert.alert(
+                                  "Error",
+                                  err.response?.data?.error ||
+                                    "Failed to remove player",
+                                );
+                              }
+                            },
+                          },
+                        ],
+                      );
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: "#ff4444",
+                        fontSize: 20,
+                        fontWeight: "300",
+                        paddingHorizontal: 8,
+                      }}
+                    >
+                      ✕
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               ))
             )}
@@ -222,11 +260,103 @@ export default function LeagueDetailScreen() {
         {/* STANDINGS TAB */}
         {activeTab === "standings" && (
           <View>
-            <Text style={styles.sectionTitle}>Standings</Text>
-            {league?.status === "pending" ? (
+            <Text style={styles.sectionTitle}>
+              {league?.status === "pending" && (
+                <View
+                  style={{
+                    backgroundColor: "#f59e0b22",
+                    borderRadius: 10,
+                    padding: 10,
+                    marginBottom: 12,
+                    borderWidth: 1,
+                    borderColor: "#f59e0b44",
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  <Text style={{ fontSize: 16 }}>⏳</Text>
+                  <Text
+                    style={{
+                      color: "#f59e0b",
+                      fontSize: 13,
+                      fontWeight: "500",
+                    }}
+                  >
+                    League hasn't started yet! Picks are still open
+                  </Text>
+                </View>
+              )}
+              {league?.status === "pending" ? "Teams" : "Standings"}
+            </Text>
+            {league?.members?.length === 0 ? (
               <View style={styles.empty}>
-                <Text style={styles.emptyText}>League has not started yet</Text>
+                <Text style={styles.emptyText}>No teams yet</Text>
               </View>
+            ) : league?.status === "pending" ? (
+              // Prikaz timova dok liga nije počela
+              league.members.map((member: any) => (
+                <TouchableOpacity
+                  key={member.id}
+                  style={styles.standingRow}
+                  onPress={() => router.push(`/league/${id}/team/${member.id}`)}
+                >
+                  <Text style={styles.rank}>
+                    {member.user.id === user?.id ? "⭐" : "👤"}
+                  </Text>
+                  <View style={styles.standingInfo}>
+                    <Text style={styles.standingTeam}>{member.team_name}</Text>
+                    <Text style={styles.standingUser}>
+                      {member.user.username}
+                    </Text>
+                  </View>
+                  {league?.commissioner_id === user?.id &&
+                  member.user.id !== user?.id ? (
+                    <TouchableOpacity
+                      onPress={() => {
+                        Alert.alert(
+                          "Remove Member",
+                          `Remove ${member.team_name} from the league?`,
+                          [
+                            { text: "Cancel", style: "cancel" },
+                            {
+                              text: "Remove",
+                              style: "destructive",
+                              onPress: async () => {
+                                try {
+                                  await leagueService.removeMember(
+                                    id,
+                                    member.user.id,
+                                  );
+                                  load();
+                                } catch (err: any) {
+                                  Alert.alert(
+                                    "Error",
+                                    err.response?.data?.error ||
+                                      "Failed to remove member",
+                                  );
+                                }
+                              },
+                            },
+                          ],
+                        );
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: "#ff4444",
+                          fontSize: 18,
+                          paddingHorizontal: 8,
+                        }}
+                      >
+                        ✕
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <Text style={{ color: "#888", fontSize: 13 }}>View →</Text>
+                  )}
+                </TouchableOpacity>
+              ))
             ) : standings.length === 0 ? (
               <View style={styles.empty}>
                 <Text style={styles.emptyText}>No results available yet</Text>
@@ -322,6 +452,48 @@ export default function LeagueDetailScreen() {
                 }}
               >
                 <Text style={styles.leaveBtnText}>Leave League</Text>
+              </TouchableOpacity>
+            )}
+
+            {league?.commissioner_id === user?.id && (
+              <TouchableOpacity
+                style={[
+                  styles.leaveBtn,
+                  {
+                    borderColor: "#ff4444",
+                    marginTop: 12,
+                    backgroundColor: "#ff444411",
+                  },
+                ]}
+                onPress={() => {
+                  Alert.alert(
+                    "Delete League",
+                    "Are you sure? This will permanently delete the league and all its data.",
+                    [
+                      { text: "Cancel", style: "cancel" },
+                      {
+                        text: "Delete League",
+                        style: "destructive",
+                        onPress: async () => {
+                          try {
+                            await leagueService.deleteLeague(league.id);
+                            router.replace("/(tabs)/leagues");
+                          } catch (err: any) {
+                            Alert.alert(
+                              "Error",
+                              err.response?.data?.error ||
+                                "Failed to delete league",
+                            );
+                          }
+                        },
+                      },
+                    ],
+                  );
+                }}
+              >
+                <Text style={[styles.leaveBtnText, { color: "#ff4444" }]}>
+                  🗑 Delete League
+                </Text>
               </TouchableOpacity>
             )}
           </View>
