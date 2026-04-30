@@ -1,19 +1,40 @@
-const tintColorLight = '#2f95dc';
-const tintColorDark = '#fff';
+export const C = {
+  gold: '#D4AF37',
+  gold2: '#F5D16A',
+  dark: '#0C0C1A',
+  dark2: '#12122A',
+  dark3: '#1A1A35',
+  accent: '#7B3FE4',
+  accent2: '#A66EF5',
+  red: '#E44B4B',
+  green: '#3FE48A',
+  blue: '#3FA9E4',
+  gold18: 'rgba(212,175,55,0.18)',
+  gold33: 'rgba(212,175,55,0.33)',
+  gold55: 'rgba(212,175,55,0.55)',
+  accent33: 'rgba(123,63,228,0.33)',
+  white4: 'rgba(255,255,255,0.04)',
+  white6: 'rgba(255,255,255,0.06)',
+  white8: 'rgba(255,255,255,0.08)',
+  white10: 'rgba(255,255,255,0.1)',
+  white35: 'rgba(255,255,255,0.35)',
+  white40: 'rgba(255,255,255,0.4)',
+  white50: 'rgba(255,255,255,0.5)',
+};
 
 export default {
   light: {
     text: '#000',
     background: '#fff',
-    tint: tintColorLight,
+    tint: '#2f95dc',
     tabIconDefault: '#ccc',
-    tabIconSelected: tintColorLight,
+    tabIconSelected: '#2f95dc',
   },
   dark: {
     text: '#fff',
-    background: '#000',
-    tint: tintColorDark,
-    tabIconDefault: '#ccc',
-    tabIconSelected: tintColorDark,
+    background: C.dark,
+    tint: C.gold,
+    tabIconDefault: '#555',
+    tabIconSelected: C.gold,
   },
 };

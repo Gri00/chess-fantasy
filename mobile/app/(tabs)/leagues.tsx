@@ -14,22 +14,58 @@ import {
   Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { leagueService } from "../../services/leagues";
+import { C } from "../../constants/Colors";
+
+const STATUS_COLOR: Record<string, string> = {
+  pending: "#f59e0b",
+  active: C.green,
+  completed: "#888",
+};
+
+function GoldInput({
+  placeholder,
+  value,
+  onChangeText,
+  autoCapitalize,
+  maxLength,
+}: {
+  placeholder: string;
+  value: string;
+  onChangeText: (t: string) => void;
+  autoCapitalize?: "none" | "characters";
+  maxLength?: number;
+}) {
+  return (
+    <View style={s.inputWrapper}>
+      <TextInput
+        style={s.input}
+        placeholder={placeholder}
+        placeholderTextColor={C.white35}
+        value={value}
+        onChangeText={onChangeText}
+        autoCapitalize={autoCapitalize}
+        maxLength={maxLength}
+      />
+    </View>
+  );
+}
 
 export default function LeaguesScreen() {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [leagues, setLeagues] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
-  const router = useRouter();
 
-  // Create form
   const [name, setName] = useState("");
   const [teamName, setTeamName] = useState("");
   const [creating, setCreating] = useState(false);
 
-  // Join form
   const [inviteCode, setInviteCode] = useState("");
   const [joinTeamName, setJoinTeamName] = useState("");
   const [joining, setJoining] = useState(false);
@@ -38,7 +74,7 @@ export default function LeaguesScreen() {
     try {
       const data = await leagueService.getMyLeagues();
       setLeagues(data);
-    } catch (err) {
+    } catch {
       Alert.alert("Error", "Failed to load leagues");
     } finally {
       setLoading(false);
@@ -95,24 +131,17 @@ export default function LeaguesScreen() {
     }
   };
 
-  const statusColor = (status: string) =>
-    ({
-      pending: "#f59e0b",
-      active: "#22c55e",
-      completed: "#888",
-    })[status] || "#888";
-
   if (loading)
     return (
-      <View style={styles.center}>
-        <ActivityIndicator color="#22c55e" size="large" />
+      <View style={[s.center, { backgroundColor: C.dark }]}>
+        <ActivityIndicator color={C.gold} size="large" />
       </View>
     );
 
   return (
-    <View style={styles.container}>
+    <View style={[s.container, { paddingTop: insets.top }]}>
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={s.content}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -120,189 +149,192 @@ export default function LeaguesScreen() {
               setRefreshing(true);
               load();
             }}
-            tintColor="#22c55e"
+            tintColor={C.gold}
           />
         }
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>My Leagues</Text>
+        <Text style={s.title}>
+          🏆 <Text style={{ color: C.gold }}>Leagues</Text>
+        </Text>
 
         {leagues.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>🏆</Text>
-            <Text style={styles.emptyText}>You are not in any leagues</Text>
-            <Text style={styles.emptySubtext}>
-              Create a new one or join an existing one
+          <View style={s.empty}>
+            <Text style={{ fontSize: 52, marginBottom: 16 }}>♟</Text>
+            <Text style={s.emptyTitle}>No leagues yet</Text>
+            <Text style={s.emptySub}>
+              Create a new one or join with an invite code
             </Text>
           </View>
         ) : (
-          leagues.map((item) => (
-            <TouchableOpacity
-              key={item.league.id}
-              style={styles.card}
-              onPress={() =>
-                router.push({
-                  pathname: "/league/[id]",
-                  params: { id: String(item.league.id) },
-                })
-              }
-            >
-              <View style={styles.cardHeader}>
-                <Text style={styles.leagueName}>{item.league.name}</Text>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    { backgroundColor: statusColor(item.league.status) + "22" },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.statusText,
-                      { color: statusColor(item.league.status) },
-                    ]}
-                  >
-                    {item.league.status}
-                  </Text>
-                </View>
-              </View>
-              <Text style={styles.teamName}>Tim: {item.team_name}</Text>
-              {item.league.invite_code && (
-                <Text style={styles.inviteCode}>
-                  Invite: {item.league.invite_code}
-                </Text>
-              )}
-            </TouchableOpacity>
-          ))
+          leagues.map((item) => {
+            const statusColor = STATUS_COLOR[item.league.status] ?? "#888";
+            return (
+              <TouchableOpacity
+                key={item.league.id}
+                onPress={() =>
+                  router.push({
+                    pathname: "/league/[id]",
+                    params: { id: String(item.league.id) },
+                  })
+                }
+                activeOpacity={0.8}
+              >
+                <LinearGradient colors={["#1a0a3a", "#0a1220"]} style={s.card}>
+                  <View style={s.cardHeader}>
+                    <Text style={s.leagueName}>{item.league.name}</Text>
+                    <View
+                      style={[
+                        s.statusPill,
+                        {
+                          backgroundColor: statusColor + "22",
+                          borderColor: statusColor + "55",
+                        },
+                      ]}
+                    >
+                      <Text style={[s.statusText, { color: statusColor }]}>
+                        {item.league.status}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={s.teamNameText}>Team: {item.team_name}</Text>
+                  {item.league.invite_code && (
+                    <View style={s.codeRow}>
+                      <Text style={s.codeLabel}>INVITE CODE</Text>
+                      <Text style={s.codeValue}>{item.league.invite_code}</Text>
+                    </View>
+                  )}
+                  <Text style={s.cardArrow}>View League →</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            );
+          })
         )}
       </ScrollView>
 
-      <View style={styles.actions}>
+      {/* Bottom actions */}
+      <View
+        style={[
+          s.actions,
+          { paddingBottom: insets.bottom - 16, paddingTop: 12 },
+        ]}
+      >
         <TouchableOpacity
-          style={styles.joinBtn}
+          style={s.joinBtn}
           onPress={() => setShowJoin(true)}
+          activeOpacity={0.8}
         >
-          <Text style={styles.joinBtnText}>+ Join League</Text>
+          <Text style={s.joinBtnText}>+ Join League</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={styles.createBtn}
           onPress={() => setShowCreate(true)}
+          activeOpacity={0.85}
+          style={{ flex: 1 }}
         >
-          <Text style={styles.createBtnText}>+ Create League</Text>
+          <LinearGradient
+            colors={[C.gold, C.gold2]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={s.createBtn}
+          >
+            <Text style={s.createBtnText}>+ Create League</Text>
+          </LinearGradient>
         </TouchableOpacity>
       </View>
 
-      {/* Create Modal */}
+      {/* ── Create Modal ── */}
       <Modal visible={showCreate} animationType="slide" transparent>
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={{
-            flex: 1,
-            justifyContent: "flex-end",
-            backgroundColor: "rgba(0,0,0,0.8)",
-          }}
+          style={s.modalOverlay}
         >
-          <View style={[styles.modal, { paddingBottom: 50 }]}>
-            <Text style={styles.modalTitle}>New League</Text>
-            <TextInput
-              style={styles.input}
+          <View style={s.sheet}>
+            <View style={s.sheetHandle} />
+            <Text style={s.sheetTitle}>New League</Text>
+            <GoldInput
               placeholder="League name"
-              placeholderTextColor="#666"
               value={name}
               onChangeText={setName}
             />
-            <TextInput
-              style={styles.input}
+            <GoldInput
               placeholder="Your team name"
-              placeholderTextColor="#666"
               value={teamName}
               onChangeText={setTeamName}
             />
             <TouchableOpacity
-              style={{
-                backgroundColor: "#22c55e",
-                padding: 16,
-                borderRadius: 12,
-                alignItems: "center",
-                marginBottom: 8,
-              }}
               onPress={handleCreate}
               disabled={creating}
+              activeOpacity={0.85}
             >
-              {creating ? (
-                <ActivityIndicator color="#000" />
-              ) : (
-                <Text
-                  style={{ color: "#000", fontSize: 16, fontWeight: "700" }}
-                >
-                  Create
-                </Text>
-              )}
+              <LinearGradient
+                colors={[C.gold, C.gold2]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={s.sheetBtn}
+              >
+                {creating ? (
+                  <ActivityIndicator color={C.dark} />
+                ) : (
+                  <Text style={s.sheetBtnText}>CREATE</Text>
+                )}
+              </LinearGradient>
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.cancelBtn}
+              style={s.cancelBtn}
               onPress={() => setShowCreate(false)}
             >
-              <Text style={styles.cancelText}>Cancel</Text>
+              <Text style={s.cancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Join Modal */}
+      {/* ── Join Modal ── */}
       <Modal visible={showJoin} animationType="slide" transparent>
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={{
-            flex: 1,
-            justifyContent: "flex-end",
-            backgroundColor: "rgba(0,0,0,0.8)",
-          }}
+          style={s.modalOverlay}
         >
-          <View style={[styles.modal, { paddingBottom: 50 }]}>
-            <Text style={styles.modalTitle}>Join League</Text>
-            <TextInput
-              style={styles.input}
+          <View style={s.sheet}>
+            <View style={s.sheetHandle} />
+            <Text style={s.sheetTitle}>Join League</Text>
+            <GoldInput
               placeholder="Invite code (e.g. CA8265DB)"
-              placeholderTextColor="#666"
               value={inviteCode}
-              onChangeText={(text) =>
-                setInviteCode(text.replace(/\s/g, "").toUpperCase())
+              onChangeText={(t) =>
+                setInviteCode(t.replace(/\s/g, "").toUpperCase())
               }
               autoCapitalize="characters"
               maxLength={8}
             />
-            <TextInput
-              style={styles.input}
+            <GoldInput
               placeholder="Your team name"
-              placeholderTextColor="#666"
               value={joinTeamName}
               onChangeText={setJoinTeamName}
             />
             <TouchableOpacity
-              style={{
-                backgroundColor: "#22c55e",
-                padding: 16,
-                borderRadius: 12,
-                alignItems: "center",
-                marginBottom: 8,
-              }}
               onPress={handleJoin}
               disabled={joining}
+              activeOpacity={0.85}
             >
-              {joining ? (
-                <ActivityIndicator color="#000" />
-              ) : (
-                <Text
-                  style={{ color: "#000", fontSize: 16, fontWeight: "700" }}
-                >
-                  Join
-                </Text>
-              )}
+              <LinearGradient
+                colors={[C.gold, C.gold2]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={s.sheetBtn}
+              >
+                {joining ? (
+                  <ActivityIndicator color={C.dark} />
+                ) : (
+                  <Text style={s.sheetBtnText}>JOIN</Text>
+                )}
+              </LinearGradient>
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.cancelBtn}
+              style={s.cancelBtn}
               onPress={() => setShowJoin(false)}
             >
-              <Text style={styles.cancelText}>Cancel</Text>
+              <Text style={s.cancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -311,100 +343,148 @@ export default function LeaguesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0f0f0f" },
-  center: {
-    flex: 1,
-    backgroundColor: "#0f0f0f",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  content: { padding: 20, paddingBottom: 100 },
-  title: { fontSize: 26, color: "#fff", fontWeight: "700", marginBottom: 20 },
-  empty: { alignItems: "center", paddingTop: 60 },
-  emptyIcon: { fontSize: 48, marginBottom: 12 },
-  emptyText: {
-    fontSize: 18,
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.dark },
+  center: { flex: 1, alignItems: "center", justifyContent: "center" },
+  content: { paddingHorizontal: 20, paddingBottom: 16 },
+
+  title: {
     color: "#fff",
-    fontWeight: "600",
-    marginBottom: 6,
+    fontSize: 22,
+    fontWeight: "700",
+    marginBottom: 20,
+    marginTop: 8,
   },
-  emptySubtext: { fontSize: 14, color: "#888", textAlign: "center" },
+
+  empty: { alignItems: "center", paddingTop: 80 },
+  emptyTitle: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  emptySub: {
+    color: C.white40,
+    fontSize: 13,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+
   card: {
-    backgroundColor: "#1a1a1a",
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 18,
+    padding: 18,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#2a2a2a",
+    borderColor: C.gold33,
   },
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 6,
+    marginBottom: 8,
   },
-  leagueName: { fontSize: 17, color: "#fff", fontWeight: "600", flex: 1 },
-  statusBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  leagueName: { color: "#fff", fontSize: 16, fontWeight: "700", flex: 1 },
+  statusPill: {
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
   statusText: { fontSize: 11, fontWeight: "600" },
-  teamName: { fontSize: 13, color: "#888", marginBottom: 4 },
-  inviteCode: { fontSize: 12, color: "#22c55e", fontFamily: "monospace" },
+  teamNameText: { color: C.white40, fontSize: 13, marginBottom: 8 },
+  codeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 8,
+  },
+  codeLabel: { color: C.white35, fontSize: 10, letterSpacing: 1 },
+  codeValue: {
+    color: C.gold,
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+  },
+  cardArrow: { color: C.gold, fontSize: 12, marginTop: 4 },
+
   actions: {
-    position: "absolute",
-    bottom: 24,
-    left: 20,
-    right: 20,
     flexDirection: "row",
     gap: 12,
+    paddingHorizontal: 20,
+    backgroundColor: C.dark,
+    borderTopWidth: 1,
+    borderTopColor: C.white6,
   },
   joinBtn: {
     flex: 1,
-    backgroundColor: "#1a1a1a",
-    borderRadius: 12,
-    paddingVertical: 14,
+    backgroundColor: C.dark3,
+    borderRadius: 14,
+    paddingVertical: 15,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#2a2a2a",
+    borderColor: C.gold55,
   },
-  joinBtnText: { color: "#fff", fontWeight: "600" },
-  createBtn: {
-    flex: 1,
-    backgroundColor: "#22c55e",
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
+  joinBtnText: { color: C.gold, fontWeight: "700", fontSize: 14 },
+  createBtn: { borderRadius: 14, paddingVertical: 15, alignItems: "center" },
+  createBtnText: {
+    color: C.dark,
+    fontWeight: "800",
+    fontSize: 14,
+    letterSpacing: 1,
   },
-  createBtnText: { color: "#000", fontWeight: "600", fontSize: 16 },
+
+  // Modal / sheet
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.8)",
     justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.75)",
   },
-  modal: {
-    backgroundColor: "#1a1a1a",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+  sheet: {
+    backgroundColor: C.dark2,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     padding: 24,
-    paddingBottom: 50,
-    minHeight: 300,
+    paddingBottom: 48,
+    borderTopWidth: 1,
+    borderColor: C.gold33,
   },
-  modalTitle: {
-    fontSize: 20,
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: C.white10,
+    alignSelf: "center",
+    marginBottom: 20,
+  },
+  sheetTitle: {
     color: "#fff",
+    fontSize: 20,
     fontWeight: "700",
     marginBottom: 20,
   },
+  inputWrapper: { marginBottom: 12 },
   input: {
-    backgroundColor: "#0f0f0f",
+    backgroundColor: C.dark3,
     color: "#fff",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    marginBottom: 12,
+    borderRadius: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 15,
+    fontSize: 15,
     borderWidth: 1,
-    borderColor: "#2a2a2a",
+    borderColor: C.gold33,
   },
-  cancelBtn: { marginTop: 8, alignItems: "center", paddingVertical: 12 },
-  cancelText: { color: "#888", fontSize: 15 },
+  sheetBtn: {
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  sheetBtnText: {
+    color: C.dark,
+    fontSize: 15,
+    fontWeight: "800",
+    letterSpacing: 2,
+  },
+  cancelBtn: { marginTop: 12, alignItems: "center", paddingVertical: 10 },
+  cancelText: { color: C.white40, fontSize: 14 },
 });

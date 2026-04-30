@@ -1,53 +1,110 @@
 import { Tabs } from "expo-router";
-import { Text } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
+import { C } from "../../constants/Colors";
 
-function Icon({ symbol }: { symbol: string }) {
-  return <Text style={{ fontSize: 20 }}>{symbol}</Text>;
+function TabIcon({
+  symbol,
+  label,
+  focused,
+  live,
+}: {
+  symbol: string;
+  label: string;
+  focused: boolean;
+  live?: boolean;
+}) {
+  return (
+    <View style={s.iconWrap}>
+      <View style={s.iconRow}>
+        <Text style={[s.symbol, !focused && s.symbolDim]}>{symbol}</Text>
+        {live && <View style={s.liveDot} />}
+      </View>
+      <Text style={[s.label, focused ? s.labelActive : s.labelDim]}>
+        {label}
+      </Text>
+      {focused && <View style={s.activeDot} />}
+    </View>
+  );
 }
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
+        headerShown: false,
         tabBarStyle: {
-          backgroundColor: "#0f0f0f",
-          borderTopColor: "#1a1a1a",
+          backgroundColor: "rgba(12,12,26,0.98)",
+          borderTopWidth: 1,
+          borderTopColor: "rgba(212,175,55,0.15)",
+          height: 72,
+          paddingBottom: 0,
+          paddingTop: 0,
         },
-        tabBarActiveTintColor: "#22c55e",
-        tabBarInactiveTintColor: "#555",
-        headerStyle: { backgroundColor: "#0f0f0f" },
-        headerTintColor: "#fff",
-        headerTitleStyle: { fontWeight: "700" },
+        tabBarShowLabel: false,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
-          tabBarIcon: ({ color }) => <Icon symbol="🏠" />,
-        }}
-      />
-      <Tabs.Screen
-        name="leagues"
-        options={{
-          title: "Leagues",
-          tabBarIcon: ({ color }) => <Icon symbol="🏆" />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon symbol="🏠" label="Home" focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="players"
         options={{
-          title: "Players",
-          tabBarIcon: ({ color }) => <Icon symbol="♟" />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon symbol="♟" label="Players" focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="leagues"
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon symbol="🏆" label="League" focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profile",
-          tabBarIcon: ({ color }) => <Icon symbol="👤" />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon symbol="👤" label="Profile" focused={focused} />
+          ),
         }}
       />
     </Tabs>
   );
 }
+
+const s = StyleSheet.create({
+  iconWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 10,
+    width: 60,
+  },
+  iconRow: { flexDirection: "row", alignItems: "center" },
+  symbol: { fontSize: 22 },
+  symbolDim: { opacity: 0.4 },
+  label: { fontSize: 9, letterSpacing: 0.8, marginTop: 3, fontWeight: "700" },
+  labelActive: { color: C.gold },
+  labelDim: { color: "rgba(255,255,255,0.3)" },
+  activeDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: C.gold,
+    marginTop: 3,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: C.red,
+    marginLeft: 3,
+    marginTop: -8,
+  },
+});

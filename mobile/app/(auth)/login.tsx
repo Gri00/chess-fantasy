@@ -7,12 +7,14 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  ScrollView,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
 } from "react-native";
 import { Link } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 import { useAuthStore } from "../../stores/useAuthStore";
+import { C } from "../../constants/Colors";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -36,100 +38,192 @@ export default function LoginScreen() {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.inner}
-      keyboardShouldPersistTaps="handled"
-      bounces={false}
-    >
-      <Text style={styles.logo}>Fantasy Chess ♟</Text>
-      <Text style={styles.subtitle}>Sign in to your account</Text>
+    <LinearGradient colors={["#1a0a3a", C.dark]} style={styles.gradient}>
+      {/* Floating corner pieces */}
+      <Text style={[styles.floatingPiece, { top: 120, left: 24 }]}>♖</Text>
+      <Text style={[styles.floatingPiece, { top: 100, right: 24 }]}>♗</Text>
+      <Text style={[styles.floatingPiece, { bottom: 140, right: 20 }]}>♘</Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        placeholderTextColor="#666"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        placeholderTextColor="#666"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
-
-      <TouchableOpacity
-        style={[styles.button, loading && styles.buttonDisabled]}
-        onPress={handleLogin}
-        disabled={loading}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.kav}
       >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Sign in</Text>
-        )}
-      </TouchableOpacity>
+        <ScrollView
+          contentContainerStyle={styles.inner}
+          keyboardShouldPersistTaps="handled"
+          bounces={false}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Logo */}
+          <View style={styles.logoBox}>
+            <Text style={styles.logoIcon}>♔</Text>
+          </View>
+          <Text style={styles.title}>CHESS</Text>
+          <Text style={styles.titleSub}>FANTASY</Text>
+          <View style={styles.divider} />
+          <Text style={styles.subtitle}>Sign in to your account</Text>
 
-      <Link href="/(auth)/register" asChild>
-        <TouchableOpacity style={styles.linkBtn}>
-          <Text style={styles.linkText}>
-            Don't have an account? <Text style={styles.linkBold}>Sign up</Text>
-          </Text>
-        </TouchableOpacity>
-      </Link>
-    </ScrollView>
+          {/* Form */}
+          <View style={styles.form}>
+            <View style={styles.inputWrapper}>
+              <Text style={styles.inputLabel}>EMAIL</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="your@email.com"
+                placeholderTextColor={C.white35}
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
+            </View>
+
+            <View style={styles.inputWrapper}>
+              <Text style={styles.inputLabel}>PASSWORD</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="••••••••"
+                placeholderTextColor={C.white35}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+              />
+            </View>
+
+            <TouchableOpacity
+              onPress={handleLogin}
+              disabled={loading}
+              activeOpacity={0.85}
+              style={styles.btnWrapper}
+            >
+              <LinearGradient
+                colors={[C.gold, C.gold2]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={[styles.btn, loading && styles.btnDisabled]}
+              >
+                {loading ? (
+                  <ActivityIndicator color={C.dark} />
+                ) : (
+                  <Text style={styles.btnText}>SIGN IN</Text>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+
+          <Link href="/(auth)/register" asChild>
+            <TouchableOpacity style={styles.linkBtn}>
+              <Text style={styles.linkText}>
+                Don't have an account?{" "}
+                <Text style={styles.linkBold}>Sign up</Text>
+              </Text>
+            </TouchableOpacity>
+          </Link>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0f0f0f" },
+  gradient: { flex: 1 },
+  kav: { flex: 1 },
+  floatingPiece: {
+    position: "absolute",
+    fontSize: 28,
+    color: C.gold,
+    opacity: 0.15,
+  },
   inner: {
     flexGrow: 1,
+    alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 24,
+    paddingHorizontal: 28,
     paddingVertical: 60,
-    paddingBottom: 130,
+    paddingBottom: 100,
   },
-  logo: {
-    fontSize: 36,
-    color: "#fff",
-    fontWeight: "700",
-    textAlign: "center",
-    marginBottom: 8,
+  logoBox: {
+    width: 88,
+    height: 88,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: C.gold55,
+    backgroundColor: C.gold18,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
+    shadowColor: C.gold,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.45,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  logoIcon: { fontSize: 46, color: C.gold },
+  title: {
+    color: C.gold,
+    fontSize: 34,
+    fontWeight: "900",
+    letterSpacing: 6,
+  },
+  titleSub: {
+    color: C.gold2,
+    fontSize: 16,
+    fontWeight: "400",
+    letterSpacing: 12,
+    fontStyle: "italic",
+    marginTop: 2,
+  },
+  divider: {
+    width: 50,
+    height: 1,
+    backgroundColor: C.gold,
+    opacity: 0.5,
+    marginVertical: 12,
   },
   subtitle: {
-    fontSize: 16,
-    color: "#888",
-    textAlign: "center",
-    marginBottom: 40,
+    color: C.white40,
+    fontSize: 13,
+    letterSpacing: 1,
+    marginBottom: 36,
+  },
+  form: { width: "100%", gap: 4 },
+  inputWrapper: { marginBottom: 14 },
+  inputLabel: {
+    color: C.gold,
+    fontSize: 10,
+    letterSpacing: 2,
+    fontWeight: "700",
+    marginBottom: 6,
   },
   input: {
-    backgroundColor: "#1a1a1a",
+    backgroundColor: C.dark3,
     color: "#fff",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#2a2a2a",
-  },
-  button: {
-    backgroundColor: "#22c55e",
-    borderRadius: 12,
+    borderRadius: 14,
+    paddingHorizontal: 18,
     paddingVertical: 15,
-    alignItems: "center",
-    marginTop: 8,
+    fontSize: 15,
+    borderWidth: 1,
+    borderColor: C.gold33,
   },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
-  linkBtn: { marginTop: 20, alignItems: "center" },
-  linkText: { color: "#888", fontSize: 14 },
-  linkBold: { color: "#22c55e", fontWeight: "600" },
+  btnWrapper: { marginTop: 10 },
+  btn: {
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: "center",
+    shadowColor: C.gold,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  btnDisabled: { opacity: 0.6 },
+  btnText: {
+    color: C.dark,
+    fontSize: 15,
+    fontWeight: "800",
+    letterSpacing: 2,
+  },
+  linkBtn: { marginTop: 28, alignItems: "center" },
+  linkText: { color: C.white40, fontSize: 14 },
+  linkBold: { color: C.gold, fontWeight: "600" },
 });
