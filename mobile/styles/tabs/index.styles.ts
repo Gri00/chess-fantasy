@@ -1,0 +1,232 @@
+import { C } from "@/constants/Colors";
+import { StyleSheet } from "react-native";
+
+export const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.dark },
+  content: { paddingHorizontal: 20, paddingBottom: 24 },
+
+  // Header
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  greeting: {
+    color: C.white40,
+    fontSize: 11,
+    letterSpacing: 2,
+    fontWeight: "600",
+  },
+  name: { color: "#fff", fontSize: 22, fontWeight: "700", marginTop: 2 },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 10 },
+  bellBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: C.dark3,
+    borderWidth: 1,
+    borderColor: C.white8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bellIcon: { fontSize: 16 },
+  avatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    backgroundColor: C.accent,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarText: { color: "#fff", fontWeight: "800", fontSize: 14 },
+
+  // Badge
+  badge: {
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(212,175,55,0.12)",
+    borderWidth: 1,
+    borderColor: C.gold55,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    marginBottom: 8,
+  },
+  badgeText: {
+    color: C.gold,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+
+  // Banner
+  banner: {
+    borderRadius: 20,
+    padding: 18,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: C.gold33,
+    overflow: "hidden",
+  },
+  bannerAbsPiece: { position: "absolute", right: -10, top: -10 },
+  bannerTop: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 14,
+  },
+  bannerTitle: {
+    color: "#fff",
+    fontSize: 17,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  bannerSub: { color: C.white40, fontSize: 12 },
+  bannerRank: { alignItems: "flex-end" },
+  bannerRankNum: { color: C.gold, fontSize: 26, fontWeight: "800" },
+  bannerRankLabel: { color: C.white40, fontSize: 10, letterSpacing: 1 },
+  progressTrack: {
+    height: 4,
+    backgroundColor: C.white10,
+    borderRadius: 2,
+    overflow: "hidden",
+  },
+  progressBar: {
+    height: "100%",
+    backgroundColor: C.gold,
+    borderRadius: 2,
+  },
+  bannerFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 6,
+  },
+  bannerFooterLabel: { color: C.white35, fontSize: 10 },
+  bannerFooterPts: { color: C.gold, fontSize: 10, fontWeight: "700" },
+
+  // Stats
+  statsGrid: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 20,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: C.dark3,
+    borderRadius: 14,
+    padding: 12,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: C.white6,
+  },
+  statIcon: { fontSize: 20, marginBottom: 6 },
+  statVal: { fontSize: 13, fontWeight: "700" },
+  statLabel: {
+    color: C.white35,
+    fontSize: 9,
+    marginTop: 2,
+    textAlign: "center",
+  },
+
+  // Section
+  section: { marginBottom: 20 },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  sectionTitle: { color: "#fff", fontSize: 15, fontWeight: "700" },
+  sectionLink: { color: C.gold, fontSize: 12 },
+
+  // Player cards
+  playerCard: {
+    width: 80,
+    backgroundColor: C.dark3,
+    borderRadius: 14,
+    padding: 10,
+    alignItems: "center",
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: C.white6,
+  },
+  playerCardCap: { borderColor: C.gold55 },
+  playerPieceBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: "rgba(123,63,228,0.25)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 6,
+  },
+  playerPiece: { fontSize: 22, color: C.gold },
+  playerName: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "700",
+    marginBottom: 2,
+  },
+  playerPts: { color: C.gold, fontSize: 10 },
+  capBadge: {
+    marginTop: 4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: C.gold,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  capText: { color: C.dark, fontSize: 9, fontWeight: "800" },
+
+  // Live
+  liveCard: {
+    backgroundColor: C.dark3,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: C.white6,
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "center",
+  },
+  liveMatch: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  liveStatus: { color: C.white40, fontSize: 11, marginBottom: 6 },
+  liveTrack: {
+    height: 3,
+    backgroundColor: C.white8,
+    borderRadius: 2,
+    overflow: "hidden",
+  },
+  liveBar: { height: "100%", borderRadius: 2 },
+  liveDotBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "rgba(228,75,75,0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(228,75,75,0.4)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  liveDotInner: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: C.red,
+  },
+  liveEmpty: {
+    backgroundColor: C.dark3,
+    borderRadius: 16,
+    padding: 20,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: C.white6,
+  },
+  liveEmptyText: { color: C.white35, fontSize: 13 },
+});

@@ -2,13 +2,13 @@ import { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { playerService } from "../../../../services/players";
+import { styles } from "../../../../styles/league/teamMember.styles";
 
 const TIER_COLORS: Record<string, string> = {
   S: "#f59e0b",
@@ -96,56 +96,3 @@ export default function TeamDetailScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0f0f0f" },
-  center: {
-    flex: 1,
-    backgroundColor: "#0f0f0f",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingTop: 56,
-    paddingBottom: 16,
-  },
-  backBtn: { paddingVertical: 4 },
-  backText: { color: "#22c55e", fontSize: 15 },
-  title: { fontSize: 20, color: "#fff", fontWeight: "700" },
-  content: { padding: 16 },
-  empty: { alignItems: "center", paddingTop: 60 },
-  emptyIcon: { fontSize: 40, marginBottom: 12 },
-  emptyText: { color: "#888", fontSize: 15 },
-  playerCard: {
-    backgroundColor: "#1a1a1a",
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: "#2a2a2a",
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  tierBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-  tierText: { fontSize: 13, fontWeight: "700" },
-  playerInfo: { flex: 1 },
-  playerName: {
-    fontSize: 15,
-    color: "#fff",
-    fontWeight: "600",
-    marginBottom: 2,
-  },
-  playerSub: { fontSize: 12, color: "#888" },
-  playerRating: { fontSize: 16, color: "#22c55e", fontWeight: "700" },
-});
