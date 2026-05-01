@@ -6,8 +6,10 @@ export const liveService = {
     return data;
   },
 
-  async getLiveGame(id: string): Promise<{ game: GameDetail; live: boolean }> {
-    const { data } = await api.get(`/live/games/${id}`);
+  async getLiveGame(id: string, channel?: string): Promise<{ game: GameDetail; live: boolean }> {
+    const { data } = await api.get(`/live/games/${id}`, {
+      params: channel ? { channel } : undefined,
+    });
     return data;
   },
 };

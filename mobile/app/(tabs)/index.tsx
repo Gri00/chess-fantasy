@@ -1,3 +1,5 @@
+import { useCallback, useState } from "react";
+import { useFocusEffect } from "expo-router";
 import {
   View,
   Text,
@@ -9,9 +11,11 @@ import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuthStore } from "../../stores/useAuthStore";
+import { broadcastService } from "../../services/broadcasts";
+import { liveService } from "../../services/live";
 import { C } from "../../constants/Colors";
 
-// ── Mock data ──
+// ── Mock lineup data ──
 const MOCK_LINEUP = [
   { name: "Carlsen", piece: "♔", pts: 124, isCap: true },
   { name: "Pragg", piece: "♛", pts: 88, isCap: false },
@@ -19,10 +23,19 @@ const MOCK_LINEUP = [
   { name: "Aronian", piece: "♝", pts: 70, isCap: false },
 ];
 
-const MOCK_LIVE = [
-  { p1: "Carlsen", p2: "Nepomniachtchi", status: "Move 34 · ♞e5", prog: 60 },
-  { p1: "Ding Liren", p2: "Gukesh", status: "Move 18 · ♝f6", prog: 30 },
-];
+interface HomeLiveItem {
+  p1: string;
+  p2: string;
+  status: string;
+  prog: number;
+  type: "broadcast" | "tv";
+  roundId?: string;
+  gameId?: string;
+  tournamentName?: string;
+  roundName?: string;
+  tvId?: string;
+  channel?: string;
+}
 
 function GoldBadge({ children }: { children: string }) {
   return (
@@ -44,6 +57,84 @@ export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const firstName = user?.display_name?.split(" ")[0] ?? user?.username ?? "Player";
+  const [liveItems, setLiveItems] = useState<HomeLiveItem[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        try {
+          const broadcasts = await broadcastService.getBroadcasts();
+          if (broadcasts.length > 0) {
+            const top = broadcasts[0];
+            const games = await broadcastService.getRoundGames(top.round.id);
+            const started = games.filter((g) => g.status === "started").slice(0, 2);
+            if (started.length > 0) {
+              setLiveItems(
+                started.map((g) => {
+                  const moveCount = g.moves
+                    ? g.moves.trim().split(/\s+/).filter(Boolean).length
+                    : 0;
+                  return {
+                    type: "broadcast" as const,
+                    p1: g.white.name,
+                    p2: g.black.name,
+                    status: `Move ${moveCount}${g.opening ? " · " + g.opening.name : ""}`,
+                    prog: Math.min(Math.round(moveCount * 1.8), 92),
+                    roundId: top.round.id,
+                    gameId: g.id,
+                    tournamentName: top.name,
+                    roundName: top.round.name,
+                  };
+                }),
+              );
+              return;
+            }
+          }
+        } catch {}
+
+        // Fallback: Lichess TV featured games (dedup by game ID)
+        try {
+          const { games } = await liveService.getLiveGames();
+          const seen = new Set<string>();
+          const unique = games.filter((g) => {
+            if (seen.has(g.id)) return false;
+            seen.add(g.id);
+            return true;
+          });
+          setLiveItems(
+            unique.slice(0, 2).map((g) => ({
+              type: "tv" as const,
+              p1: g.player.name,
+              p2: "",
+              status: `${g.variant} · Lichess TV`,
+              prog: 50,
+              tvId: g.id,
+              channel: g.variant,
+            })),
+          );
+        } catch {}
+      })();
+    }, []),
+  );
+
+  const handleLiveCardPress = (item: HomeLiveItem) => {
+    if (item.type === "broadcast" && item.roundId && item.gameId) {
+      router.push({
+        pathname: "/broadcast/game",
+        params: {
+          roundId: item.roundId,
+          gameId: item.gameId,
+          tournamentName: item.tournamentName ?? "",
+          roundName: item.roundName ?? "",
+        },
+      });
+    } else if (item.tvId) {
+      router.push({
+        pathname: "/live/[id]",
+        params: { id: item.tvId, channel: item.channel ?? "" },
+      });
+    }
+  };
 
   return (
     <ScrollView
@@ -151,29 +242,44 @@ export default function HomeScreen() {
             <Text style={s.sectionLink}>See all →</Text>
           </TouchableOpacity>
         </View>
-        {MOCK_LIVE.map((m, i) => (
-          <View key={i} style={s.liveCard}>
-            <View style={{ flex: 1 }}>
-              <Text style={s.liveMatch}>
-                {m.p1}{" "}
-                <Text style={{ color: C.white35 }}>vs</Text>{" "}
-                {m.p2}
-              </Text>
-              <Text style={s.liveStatus}>{m.status}</Text>
-              <View style={s.liveTrack}>
-                <LinearGradient
-                  colors={[C.accent, C.gold]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={[s.liveBar, { width: `${m.prog}%` }]}
-                />
-              </View>
-            </View>
-            <View style={s.liveDotBox}>
-              <View style={s.liveDotInner} />
-            </View>
+        {liveItems.length === 0 ? (
+          <View style={s.liveEmpty}>
+            <Text style={s.liveEmptyText}>No live games right now</Text>
           </View>
-        ))}
+        ) : (
+          liveItems.map((item, i) => (
+            <TouchableOpacity
+              key={i}
+              style={s.liveCard}
+              activeOpacity={0.8}
+              onPress={() => handleLiveCardPress(item)}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={s.liveMatch} numberOfLines={1}>
+                  {item.p1}
+                  {item.p2 ? (
+                    <>
+                      {" "}<Text style={{ color: C.white35 }}>vs</Text>{" "}
+                      {item.p2}
+                    </>
+                  ) : null}
+                </Text>
+                <Text style={s.liveStatus} numberOfLines={1}>{item.status}</Text>
+                <View style={s.liveTrack}>
+                  <LinearGradient
+                    colors={[C.accent, C.gold]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[s.liveBar, { width: `${item.prog}%` }]}
+                  />
+                </View>
+              </View>
+              <View style={s.liveDotBox}>
+                <View style={s.liveDotInner} />
+              </View>
+            </TouchableOpacity>
+          ))
+        )}
       </View>
     </ScrollView>
   );
@@ -355,4 +461,13 @@ const s = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: C.red,
   },
+  liveEmpty: {
+    backgroundColor: C.dark3,
+    borderRadius: 16,
+    padding: 20,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: C.white6,
+  },
+  liveEmptyText: { color: C.white35, fontSize: 13 },
 });

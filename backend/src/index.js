@@ -8,6 +8,7 @@ import leagueRoutes from './routes/leagues.js'
 import playerRoutes from './routes/players.js'
 import scoringRoutes from './routes/scoring.js'
 import liveRoutes from './routes/live.js'
+import broadcastRoutes from './routes/broadcasts.js'
 
 const app = Fastify({ logger: true })
 
@@ -19,6 +20,7 @@ await app.register(leagueRoutes, { prefix: '/leagues' })
 await app.register(playerRoutes, { prefix: '/players' })
 await app.register(scoringRoutes)
 await app.register(liveRoutes, { prefix: '/live' })
+await app.register(broadcastRoutes, { prefix: '/broadcasts' })
 
 app.get('/health', async () => ({
   status: 'ok',
