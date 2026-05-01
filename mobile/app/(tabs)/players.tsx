@@ -9,22 +9,39 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { playerService } from "../../services/players";
 import { C } from "../../constants/Colors";
 
-const TIERS = ["All", "S", "A", "B", "C", "D"];
-
-const TIER_META: Record<string, { color: string; piece: string; label: string }> = {
-  S: { color: C.gold,    piece: "♔", label: "S tier" },
-  A: { color: C.accent2, piece: "♕", label: "A tier" },
-  B: { color: C.blue,    piece: "♖", label: "B tier" },
-  C: { color: C.green,   piece: "♗", label: "C tier" },
-  D: { color: "#aaa",    piece: "♘", label: "D tier" },
+// Tier labels shown in filter chips and cards
+const TIER_LABEL: Record<string, string> = {
+  S: "S Tier",
+  A: "A Tier",
+  B: "B Tier",
+  C: "C Tier",
+  D: "D Tier",
 };
+
+const TIER_COLOR: Record<string, string> = {
+  S: C.gold,
+  A: C.accent2,
+  B: C.blue,
+  C: C.green,
+  D: "#aaa",
+};
+
+const FORMAT_LABEL: Record<string, string> = {
+  classical: "Classical",
+  rapid: "Rapid",
+  blitz: "Blitz",
+};
+
+const TIERS = ["All", "S", "A", "B", "C", "D"];
 
 export default function PlayersScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [players, setPlayers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -73,25 +90,55 @@ export default function PlayersScreen() {
   }, [search, selectedTier]);
 
   const renderPlayer = ({ item }: { item: any }) => {
-    const meta = TIER_META[item.tier] ?? TIER_META["D"];
+    const color = TIER_COLOR[item.tier] ?? "#aaa";
+    const tierLabel = TIER_LABEL[item.tier] ?? "Master";
+    const formatLabel =
+      FORMAT_LABEL[item.rating_format] ?? item.rating_format ?? "";
+
     return (
-      <View style={s.card}>
-        <View style={[s.pieceBox, { borderColor: meta.color + "55", backgroundColor: meta.color + "18" }]}>
-          <Text style={[s.piece, { color: meta.color }]}>{meta.piece}</Text>
+      <TouchableOpacity
+        style={s.card}
+        activeOpacity={0.75}
+        onPress={() =>
+          router.push({
+            pathname: "/player/[username]",
+            params: { username: item.id },
+          })
+        }
+      >
+        {/* Rank */}
+        <View
+          style={[
+            s.rankBox,
+            { borderColor: color + "55", backgroundColor: color + "12" },
+          ]}
+        >
+          <Text style={[s.rankNum, { color }]}>#{item.rank ?? "—"}</Text>
         </View>
+
+        {/* Info */}
         <View style={s.cardInfo}>
-          <Text style={s.playerName}>{item.full_name}</Text>
-          <Text style={s.playerSub}>
-            {item.title}  ·  {item.country_code}  ·  ELO {item.fide_rating}
+          <Text style={s.playerName} numberOfLines={1}>
+            {item.full_name}
+          </Text>
+          <Text style={s.playerSub} numberOfLines={1}>
+            {[item.title, item.country_code].filter(Boolean).join("  ·  ")}
+            {item.fide_rating && formatLabel
+              ? `  ·  ${formatLabel} ${item.fide_rating}`
+              : ""}
           </Text>
         </View>
-        <View style={s.cardRight}>
-          <View style={[s.tierPill, { backgroundColor: meta.color + "22", borderColor: meta.color + "55" }]}>
-            <Text style={[s.tierPillText, { color: meta.color }]}>{item.tier}</Text>
-          </View>
-          <Text style={[s.elo, { color: meta.color }]}>{item.fide_rating}</Text>
+
+        {/* Tier pill */}
+        <View
+          style={[
+            s.tierPill,
+            { backgroundColor: color + "1A", borderColor: color + "55" },
+          ]}
+        >
+          <Text style={[s.tierPillText, { color }]}>{tierLabel}</Text>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -115,7 +162,7 @@ export default function PlayersScreen() {
           />
         </View>
 
-        {/* Tier filters */}
+        {/* Tier filter chips */}
         <FlatList
           data={TIERS}
           horizontal
@@ -124,17 +171,21 @@ export default function PlayersScreen() {
           contentContainerStyle={s.tierList}
           renderItem={({ item: tier }) => {
             const active = selectedTier === tier;
-            const color = TIER_META[tier]?.color ?? C.gold;
+            const color = TIER_COLOR[tier] ?? C.gold;
+            const label = tier === "All" ? "All" : TIER_LABEL[tier];
             return (
               <TouchableOpacity
                 onPress={() => setSelectedTier(tier)}
                 style={[
                   s.tierBtn,
-                  active && { borderColor: color, backgroundColor: color + "18" },
+                  active && {
+                    borderColor: color,
+                    backgroundColor: color + "1A",
+                  },
                 ]}
               >
                 <Text style={[s.tierBtnText, active && { color }]}>
-                  {tier === "All" ? "All" : `${TIER_META[tier].piece} ${tier}`}
+                  {label}
                 </Text>
               </TouchableOpacity>
             );
@@ -142,7 +193,7 @@ export default function PlayersScreen() {
         />
 
         <Text style={s.countLabel}>
-          {loading ? "Loading..." : `${players.length} players`}
+          {loading ? "Loading…" : `${players.length} players`}
         </Text>
       </View>
 
@@ -159,16 +210,24 @@ export default function PlayersScreen() {
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={() => { setRefreshing(true); load(true); }}
+              onRefresh={() => {
+                setRefreshing(true);
+                load(true);
+              }}
               tintColor={C.gold}
             />
           }
           onEndReached={() => {
-            if (!loadingMore && hasMore) { setLoadingMore(true); load(); }
+            if (!loadingMore && hasMore) {
+              setLoadingMore(true);
+              load();
+            }
           }}
           onEndReachedThreshold={0.3}
           ListFooterComponent={
-            loadingMore ? <ActivityIndicator color={C.gold} style={{ margin: 20 }} /> : null
+            loadingMore ? (
+              <ActivityIndicator color={C.gold} style={{ margin: 20 }} />
+            ) : null
           }
           ListEmptyComponent={
             <View style={s.center}>
@@ -185,7 +244,13 @@ export default function PlayersScreen() {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.dark },
   header: { paddingHorizontal: 20, paddingBottom: 8 },
-  title: { color: "#fff", fontSize: 22, fontWeight: "700", marginBottom: 14, marginTop: 8 },
+  title: {
+    color: "#fff",
+    fontSize: 22,
+    fontWeight: "700",
+    marginBottom: 14,
+    marginTop: 8,
+  },
 
   searchBox: {
     flexDirection: "row",
@@ -207,13 +272,22 @@ const s = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: C.white10,
-    backgroundColor: "transparent",
   },
   tierBtnText: { color: C.white35, fontSize: 12, fontWeight: "600" },
 
-  countLabel: { color: C.white35, fontSize: 11, letterSpacing: 0.5, marginBottom: 4 },
+  countLabel: {
+    color: C.white35,
+    fontSize: 11,
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
 
-  center: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 60 },
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 60,
+  },
   emptyText: { color: C.white40, fontSize: 15 },
 
   list: { paddingHorizontal: 20, paddingBottom: 100 },
@@ -228,26 +302,33 @@ const s = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
-  pieceBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 13,
+
+  rankBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
   },
-  piece: { fontSize: 26 },
+  rankNum: { fontSize: 12, fontWeight: "800" },
+
   cardInfo: { flex: 1 },
-  playerName: { color: "#fff", fontSize: 14, fontWeight: "700", marginBottom: 3 },
+  playerName: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 3,
+  },
   playerSub: { color: C.white40, fontSize: 11 },
-  cardRight: { alignItems: "flex-end", gap: 6 },
+
   tierPill: {
     borderRadius: 8,
     borderWidth: 1,
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 3,
+    alignItems: "center",
   },
-  tierPillText: { fontSize: 11, fontWeight: "700" },
-  elo: { fontSize: 15, fontWeight: "700" },
+  tierPillText: { fontSize: 10, fontWeight: "700" },
 });

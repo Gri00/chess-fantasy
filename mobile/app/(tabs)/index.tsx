@@ -32,6 +32,13 @@ function GoldBadge({ children }: { children: string }) {
   );
 }
 
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "GOOD MORNING";
+  if (h < 17) return "GOOD AFTERNOON";
+  return "GOOD EVENING";
+}
+
 export default function HomeScreen() {
   const { user } = useAuthStore();
   const router = useRouter();
@@ -47,15 +54,20 @@ export default function HomeScreen() {
       {/* ── Header ── */}
       <View style={s.header}>
         <View>
-          <Text style={s.greeting}>GOOD MORNING</Text>
+          <Text style={s.greeting}>{getGreeting()}</Text>
           <Text style={s.name}>
             {firstName} <Text style={{ color: C.gold }}>♟</Text>
           </Text>
         </View>
-        <View style={s.avatar}>
-          <Text style={s.avatarText}>
-            {firstName.slice(0, 2).toUpperCase()}
-          </Text>
+        <View style={s.headerRight}>
+          <TouchableOpacity style={s.bellBtn} activeOpacity={0.7} onPress={() => router.push("/notifications")}>
+            <Text style={s.bellIcon}>🔔</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.avatar} activeOpacity={0.8} onPress={() => router.push("/(tabs)/profile")}>
+            <Text style={s.avatarText}>
+              {firstName.slice(0, 2).toUpperCase()}
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -135,7 +147,9 @@ export default function HomeScreen() {
       <View style={s.section}>
         <View style={s.sectionHeader}>
           <Text style={s.sectionTitle}>🔴 Live Now</Text>
-          <Text style={s.sectionLink}>See all →</Text>
+          <TouchableOpacity onPress={() => router.push("/(tabs)/live")}>
+            <Text style={s.sectionLink}>See all →</Text>
+          </TouchableOpacity>
         </View>
         {MOCK_LIVE.map((m, i) => (
           <View key={i} style={s.liveCard}>
@@ -178,6 +192,9 @@ const s = StyleSheet.create({
   },
   greeting: { color: C.white40, fontSize: 11, letterSpacing: 2, fontWeight: "600" },
   name: { color: "#fff", fontSize: 22, fontWeight: "700", marginTop: 2 },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 10 },
+  bellBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: C.dark3, borderWidth: 1, borderColor: C.white8, alignItems: "center", justifyContent: "center" },
+  bellIcon: { fontSize: 16 },
   avatar: {
     width: 42,
     height: 42,

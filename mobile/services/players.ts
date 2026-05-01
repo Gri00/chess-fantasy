@@ -5,10 +5,14 @@ export const playerService = {
     page?: number;
     tier?: string;
     search?: string;
-    league_id?: string;
   }) {
     const { data } = await api.get("/players", { params });
     return data;
+  },
+
+  async getPlayer(username: string) {
+    const { data } = await api.get(`/players/${username}`);
+    return data.player;
   },
 
   async getAvailable(
@@ -27,9 +31,9 @@ export const playerService = {
     return data.roster;
   },
 
-  async addToRoster(league_id: string, chess_player_id: string) {
+  async addToRoster(league_id: string, chess_username: string) {
     const { data } = await api.post(`/players/roster/${league_id}`, {
-      chess_player_id,
+      chess_username,
     });
     return data;
   },

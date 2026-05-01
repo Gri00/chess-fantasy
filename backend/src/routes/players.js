@@ -1,8 +1,10 @@
 import { supabaseAdmin } from "../services/supabase.js";
 import authenticate from "../middleware/authenticate.js";
+import { getTopPlayers, getPlayer, searchPlayers } from "../services/chesscom.js";
 
 export default async function playerRoutes(app) {
-  // ─── BROWSE / PRETRAGA IGRAČA ────────────────────────────────
+
+  // ─── BROWSE IGRAČA (Lichess) ─────────────────────────────────────────────
   app.get(
     "/",
     {
@@ -11,140 +13,82 @@ export default async function playerRoutes(app) {
         querystring: {
           type: "object",
           properties: {
-            page: { type: "integer", default: 1 },
+            page:  { type: "integer", default: 1 },
             limit: { type: "integer", default: 20, maximum: 50 },
             search: { type: "string" },
-            tier: { type: "string", enum: ["S", "A", "B", "C", "D"] },
-            title: { type: "string" },
-            country: { type: "string" },
-            league_id: { type: "string" }, // ako je prosleđen, označi ko je već drafted
+            tier:   { type: "string", enum: ["S", "A", "B", "C", "D"] },
           },
         },
       },
     },
     async (request, reply) => {
-      const {
-        page = 1,
-        limit = 20,
-        search,
-        tier,
-        title,
-        country,
-        league_id,
-      } = request.query;
+      const { page = 1, limit = 20, search, tier } = request.query;
       const offset = (page - 1) * limit;
 
-      let query = supabaseAdmin
-        .from("chess_players")
-        .select("*", { count: "exact" })
-        .eq("is_active", true)
-        .order("fide_rating", { ascending: false })
-        .range(offset, offset + limit - 1);
+      let players;
 
-      if (search) {
-        query = query.ilike("full_name", `%${search}%`);
+      if (search && search.length >= 2) {
+        players = await searchPlayers(search);
+      } else {
+        players = await getTopPlayers();
       }
 
+      // Filter by tier
       if (tier) {
-        query = query.eq("tier", tier);
+        players = players.filter(p => p.tier === tier);
       }
 
-      if (title) {
-        query = query.eq("title", title);
+      // Filter by search within the top-200 list (name/username match)
+      if (search && search.length >= 2) {
+        const q = search.toLowerCase();
+        players = players.filter(
+          p =>
+            p.full_name.toLowerCase().includes(q) ||
+            p.id.toLowerCase().includes(q),
+        );
       }
 
-      if (country) {
-        query = query.eq("country_code", country);
-      }
-
-      const { data: players, error, count } = await query;
-
-      if (error) {
-        app.log.error(error);
-        return reply.code(500).send({ error: "Error fetching players" });
-      }
-
-      // Ako je prosleđen league_id, označi ko je već drafted
-      let draftedIds = new Set();
-      if (league_id) {
-        const { data: rostered } = await supabaseAdmin
-          .from("rosters")
-          .select("chess_player_id, league_members!inner(league_id)")
-          .eq("league_members.league_id", league_id);
-
-        if (rostered) {
-          draftedIds = new Set(rostered.map((r) => r.chess_player_id));
-        }
-      }
-
-      const playersWithStatus = players.map((p) => ({
-        ...p,
-        is_drafted: draftedIds.has(p.id),
-      }));
+      const total = players.length;
+      const paginated = players.slice(offset, offset + limit);
 
       return reply.send({
-        players: playersWithStatus,
+        players: paginated,
         pagination: {
-          page,
-          limit,
-          total: count,
-          pages: Math.ceil(count / limit),
+          page:  parseInt(page),
+          limit: parseInt(limit),
+          total,
+          pages: Math.ceil(total / limit),
         },
       });
     },
   );
 
-  // ─── DETALJI IGRAČA ─────────────────────────────────────────
+  // ─── DETALJI IGRAČA (Lichess) ────────────────────────────────────────────
   app.get(
-    "/:id",
-    {
-      onRequest: [authenticate],
-    },
+    "/:username",
+    { onRequest: [authenticate] },
     async (request, reply) => {
-      const { id } = request.params;
+      const { username } = request.params;
 
-      const { data: player, error } = await supabaseAdmin
-        .from("chess_players")
-        .select("*")
-        .eq("id", id)
-        .single();
-
-      if (error || !player) {
+      const player = await getPlayer(username);
+      if (!player) {
         return reply.code(404).send({ error: "Player not found" });
       }
 
-      // Dohvati poslednje performanse
-      const { data: performances } = await supabaseAdmin
-        .from("player_performances")
-        .select(
-          `
-        *,
-        tournament:tournaments(name, time_control, start_date, end_date)
-      `,
-        )
-        .eq("chess_player_id", id)
-        .order("created_at", { ascending: false })
-        .limit(10);
-
-      return reply.send({
-        player,
-        recent_performances: performances || [],
-      });
+      return reply.send({ player, recent_performances: [] });
     },
   );
 
-  // ─── DOSTUPNI IGRAČI U LIGI (nisu drafted) ──────────────────
+  // ─── DOSTUPNI IGRAČI U LIGI ──────────────────────────────────────────────
+  // Keeps DB-based logic for league roster context
   app.get(
     "/available/:league_id",
-    {
-      onRequest: [authenticate],
-    },
+    { onRequest: [authenticate] },
     async (request, reply) => {
       const { league_id } = request.params;
       const { tier, search, page = 1, limit = 20 } = request.query;
       const offset = (page - 1) * limit;
 
-      // Provjeri da je user član te lige
       const { data: membership } = await supabaseAdmin
         .from("league_members")
         .select("id")
@@ -153,63 +97,49 @@ export default async function playerRoutes(app) {
         .single();
 
       if (!membership) {
-        return reply
-          .code(403)
-          .send({ error: "You are not a member of this league" });
+        return reply.code(403).send({ error: "You are not a member of this league" });
       }
 
-      // Za no_draft mod — dohvati samo igrače koje JA već imam
+      // Dohvati igrače koje user već ima
       const { data: myRoster } = await supabaseAdmin
         .from("rosters")
         .select("chess_player_id")
         .eq("league_member_id", membership.id);
 
-      const draftedIds = myRoster ? myRoster.map((d) => d.chess_player_id) : [];
+      const draftedUsernames = myRoster ? myRoster.map(d => d.chess_player_id) : [];
 
-      let query = supabaseAdmin
-        .from("chess_players")
-        .select("*", { count: "exact" })
-        .eq("is_active", true)
-        .order("fide_rating", { ascending: false })
-        .range(offset, offset + limit - 1);
+      // Fetch from Lichess and exclude already drafted
+      let players = search && search.length >= 2
+        ? await searchPlayers(search)
+        : await getTopPlayers();
 
-      if (draftedIds.length > 0) {
-        query = query.not("id", "in", `(${draftedIds.join(",")})`);
+      if (tier)   players = players.filter(p => p.tier === tier);
+      if (search) {
+        const q = search.toLowerCase();
+        players = players.filter(
+          p => p.full_name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q)
+        );
       }
+      players = players.filter(p => !draftedUsernames.includes(p.id));
 
-      if (tier) query = query.eq("tier", tier);
-      if (search) query = query.ilike("full_name", `%${search}%`);
-
-      const { data: players, error, count } = await query;
-
-      if (error) {
-        app.log.error(error);
-        return reply.code(500).send({ error: "Error fetching players" });
-      }
+      const total = players.length;
+      const paginated = players.slice(offset, offset + limit);
 
       return reply.send({
-        players,
-        pagination: {
-          page,
-          limit,
-          total: count,
-          pages: Math.ceil(count / limit),
-        },
+        players: paginated,
+        pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total / limit) },
       });
     },
   );
 
-  // ─── ROSTER — DOHVATI TIM ───────────────────────────────────
+  // ─── ROSTER — DOHVATI TIM ────────────────────────────────────────────────
   app.get(
     "/roster/:league_id",
-    {
-      onRequest: [authenticate],
-    },
+    { onRequest: [authenticate] },
     async (request, reply) => {
       const { league_id } = request.params;
-      const { member_id } = request.query; // opciono — ako nije prosleđen, vraća tvoj roster
+      const { member_id } = request.query;
 
-      // Nađi membership
       let targetMemberId = member_id;
 
       if (!targetMemberId) {
@@ -221,11 +151,8 @@ export default async function playerRoutes(app) {
           .single();
 
         if (!membership) {
-          return reply
-            .code(403)
-            .send({ error: "You are not a member of this league" });
+          return reply.code(403).send({ error: "You are not a member of this league" });
         }
-
         targetMemberId = membership.id;
       }
 
@@ -240,11 +167,21 @@ export default async function playerRoutes(app) {
         return reply.code(500).send({ error: "Error fetching roster" });
       }
 
-      return reply.send({ roster });
+      // Enrich with live Chess.com data where possible
+      const enriched = await Promise.all(
+        (roster ?? []).map(async entry => {
+          if (!entry.chess_player_id) return entry;
+          const liveData = await getPlayer(entry.chess_player_id).catch(() => null);
+          return liveData ? { ...entry, player: { ...entry.player, ...liveData } } : entry;
+        }),
+      );
+
+      return reply.send({ roster: enriched });
     },
   );
 
-  // ─── ROSTER — DODAJ IGRAČA ──────────────────────────────────
+  // ─── ROSTER — DODAJ IGRAČA ───────────────────────────────────────────────
+  // Accepts chess_username (Chess.com), auto-upserts into chess_players, then adds to roster
   app.post(
     "/roster/:league_id",
     {
@@ -252,18 +189,17 @@ export default async function playerRoutes(app) {
       schema: {
         body: {
           type: "object",
-          required: ["chess_player_id"],
+          required: ["chess_username"],
           properties: {
-            chess_player_id: { type: "string" },
+            chess_username: { type: "string" },
           },
         },
       },
     },
     async (request, reply) => {
       const { league_id } = request.params;
-      const { chess_player_id } = request.body;
+      const { chess_username } = request.body;
 
-      // Nađi membership
       const { data: membership } = await supabaseAdmin
         .from("league_members")
         .select("id")
@@ -272,12 +208,9 @@ export default async function playerRoutes(app) {
         .single();
 
       if (!membership) {
-        return reply
-          .code(403)
-          .send({ error: "You are not a member of this league" });
+        return reply.code(403).send({ error: "You are not a member of this league" });
       }
 
-      // Provjeri da liga još uvek prima pickove
       const { data: league } = await supabaseAdmin
         .from("leagues")
         .select("status, picks_deadline")
@@ -287,65 +220,68 @@ export default async function playerRoutes(app) {
       if (league.status === "completed") {
         return reply.code(400).send({ error: "Season has ended" });
       }
-
-      if (
-        league.picks_deadline &&
-        new Date() > new Date(league.picks_deadline)
-      ) {
+      if (league.picks_deadline && new Date() > new Date(league.picks_deadline)) {
         return reply.code(400).send({ error: "Pick deadline has expired" });
       }
 
-      // Dodaj na roster — trigger check_tier_limit će automatski validirati
+      // Fetch from Chess.com to validate and get current data
+      const chessPlayer = await getPlayer(chess_username);
+      if (!chessPlayer) {
+        return reply.code(404).send({ error: "Player not found on Chess.com" });
+      }
+
+      // Upsert into chess_players table
+      const { data: dbPlayer, error: upsertError } = await supabaseAdmin
+        .from("chess_players")
+        .upsert(
+          {
+            id:           chessPlayer.id,
+            full_name:    chessPlayer.full_name,
+            title:        chessPlayer.title,
+            fide_rating:  chessPlayer.fide_rating,
+            tier:         chessPlayer.tier,
+            country_code: chessPlayer.country_code,
+            is_active:    true,
+          },
+          { onConflict: "id" },
+        )
+        .select()
+        .single();
+
+      if (upsertError) {
+        app.log.error(upsertError);
+        return reply.code(500).send({ error: "Error syncing player data" });
+      }
+
       const { data: roster, error } = await supabaseAdmin
         .from("rosters")
         .insert({
           league_member_id: membership.id,
-          chess_player_id,
-          acquired_via: "free_pick",
+          chess_player_id:  dbPlayer.id,
+          acquired_via:     "free_pick",
         })
-        .select(
-          `
-        *,
-        chess_player:chess_players(
-          id, full_name, title, fide_rating, tier,
-          country_code, profile_image_url
-        )
-      `,
-        )
+        .select()
         .single();
 
       if (error) {
         app.log.error(error);
-
-        // Trigger greške su čitljive — proslijedi ih direktno
-        if (error.message.includes("Roster limit for this tier")) {
+        if (error.message?.includes("Roster limit")) {
           return reply.code(400).send({ error: error.message });
-        }
-        if (error.message.includes("tier")) {
-          return reply.code(400).send({ error: error.message });
-        }
-        if (error.message.includes("already in a team")) {
-          return reply.code(409).send({ error: error.message });
         }
         if (error.code === "23505") {
-          return reply
-            .code(409)
-            .send({ error: "This player is already on your team" });
+          return reply.code(409).send({ error: "This player is already on your team" });
         }
-
         return reply.code(500).send({ error: "Error adding player" });
       }
 
-      return reply.code(201).send({ roster });
+      return reply.code(201).send({ roster: { ...roster, player: dbPlayer } });
     },
   );
 
-  // ─── ROSTER — UKLONI IGRAČA ─────────────────────────────────
+  // ─── ROSTER — UKLONI IGRAČA ──────────────────────────────────────────────
   app.delete(
     "/roster/:league_id/:chess_player_id",
-    {
-      onRequest: [authenticate],
-    },
+    { onRequest: [authenticate] },
     async (request, reply) => {
       const { league_id, chess_player_id } = request.params;
 
@@ -357,12 +293,9 @@ export default async function playerRoutes(app) {
         .single();
 
       if (!membership) {
-        return reply
-          .code(403)
-          .send({ error: "You are not a member of this league" });
+        return reply.code(403).send({ error: "You are not a member of this league" });
       }
 
-      // Provjeri da liga još uvek prima izmjene
       const { data: league } = await supabaseAdmin
         .from("leagues")
         .select("status, picks_deadline")
@@ -372,11 +305,7 @@ export default async function playerRoutes(app) {
       if (league.status === "completed") {
         return reply.code(400).send({ error: "Season has ended" });
       }
-
-      if (
-        league.picks_deadline &&
-        new Date() > new Date(league.picks_deadline)
-      ) {
+      if (league.picks_deadline && new Date() > new Date(league.picks_deadline)) {
         return reply.code(400).send({ error: "Pick deadline has expired" });
       }
 
@@ -388,9 +317,7 @@ export default async function playerRoutes(app) {
 
       if (error) {
         app.log.error(error);
-        return reply
-          .code(500)
-          .send({ error: "Error removing player from roster" });
+        return reply.code(500).send({ error: "Error removing player from roster" });
       }
 
       return reply.send({ message: "Player removed from roster" });
