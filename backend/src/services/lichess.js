@@ -54,10 +54,11 @@ export function fenFromMoves(movesStr) {
   const chess = new Chess();
   if (!movesStr) return chess.fen();
   for (const move of movesStr.trim().split(/\s+/)) {
+    if (!move) continue;
     try {
       chess.move(move);
     } catch {
-      break;
+      // skip stray tokens (annotations, punctuation) rather than aborting
     }
   }
   return chess.fen();
@@ -102,6 +103,21 @@ export async function getLiveTVChannels() {
 
 //Broadcast PGN parser
 
+function evalToWinChance(evalStr) {
+  if (!evalStr) return null;
+  let cp;
+  if (evalStr.startsWith("#")) {
+    const n = parseInt(evalStr.slice(1), 10);
+    cp = n > 0 ? 10000 : -10000;
+  } else {
+    cp = Math.round(parseFloat(evalStr) * 100);
+  }
+  if (isNaN(cp)) return null;
+  const white = Math.round(50 + 50 * (2 / (1 + Math.exp(-0.00368208 * cp)) - 1));
+  const clamped = Math.max(0, Math.min(100, white));
+  return { white: clamped, black: 100 - clamped };
+}
+
 function formatPlayerName(name) {
   if (!name) return "";
   const parts = name.split(", ");
@@ -114,8 +130,41 @@ function parseSinglePGN(pgn) {
   let m;
   while ((m = headerRe.exec(pgn)) !== null) headers[m[1]] = m[2];
 
-  const lastBracket = pgn.lastIndexOf("]");
-  let raw = lastBracket >= 0 ? pgn.slice(lastBracket + 1) : pgn;
+  // Extract last eval annotation before stripping (e.g. {[%eval 0.52]} or {[%eval #3]})
+  const evalRe = /\[%eval\s+(#-?\d+|-?\d+(?:\.\d+)?)\]/g;
+  let evalM, lastEvalStr = null;
+  while ((evalM = evalRe.exec(pgn)) !== null) lastEvalStr = evalM[1];
+
+  // Extract clock annotations — they alternate white/black starting with white (index 0)
+  const allClks = [];
+  const clkRe2 = /\[%clk\s+(\d+:\d+:\d+)\]/g;
+  let clkM2;
+  while ((clkM2 = clkRe2.exec(pgn)) !== null) allClks.push(clkM2[1]);
+  const whiteClks = allClks.filter((_, i) => i % 2 === 0);
+  const blackClks = allClks.filter((_, i) => i % 2 === 1);
+  const clock = (whiteClks.length > 0 || blackClks.length > 0) ? {
+    white: whiteClks[whiteClks.length - 1] ?? null,
+    black: blackClks[blackClks.length - 1] ?? null,
+  } : null;
+
+  // Detect time control: prefer TimeControl header, fall back to first clock annotation.
+  // OTB broadcast PGNs often omit the TimeControl header, but always have %clk.
+  // The FIRST clock annotation is closest to the initial time, so we use it as a proxy.
+  let timeControl = headers.TimeControl ?? null;
+  if (!timeControl) {
+    const firstClk = /\[%clk\s+(\d+):(\d+):(\d+)\]/.exec(pgn);
+    if (firstClk) {
+      const secs = parseInt(firstClk[1], 10) * 3600
+                 + parseInt(firstClk[2], 10) * 60
+                 + parseInt(firstClk[3], 10);
+      // Remaining time on move 1 is a reliable proxy for initial time
+      timeControl = secs >= 1800 ? "7200+0" : "600+0";
+    }
+  }
+
+  // Strip all header tags first — avoids lastIndexOf("]") hitting clock annotations
+  // like {[%clk 1:30:00]} that also contain "]"
+  let raw = pgn.replace(/\[\w+\s+"[^"]*"\]\s*/g, "").trim();
 
   raw = raw
     .replace(/\{[^}]*\}/g, "")
@@ -155,6 +204,9 @@ function parseSinglePGN(pgn) {
     result,
     status: result === "*" ? "started" : "finished",
     fen: fenFromMoves(moves),
+    winChance: evalToWinChance(lastEvalStr),
+    timeControl,
+    clock,
   };
 }
 
@@ -173,6 +225,9 @@ function parseBroadcastPGN(text) {
   }
   return games;
 }
+
+// roundId → full Lichess round URL (populated when listing broadcasts)
+const roundUrlCache = new Map()
 
 //Broadcasts API
 
@@ -194,6 +249,7 @@ export async function getOngoingBroadcasts() {
       const b = JSON.parse(line);
       const ongoingRound = b.rounds?.find((r) => r.ongoing);
       if (!ongoingRound) continue;
+      if (ongoingRound.url) roundUrlCache.set(ongoingRound.id, ongoingRound.url);
       broadcasts.push({
         id: b.tour.id,
         name: b.tour.name,
@@ -204,6 +260,7 @@ export async function getOngoingBroadcasts() {
           id: ongoingRound.id,
           name: ongoingRound.name,
           url: ongoingRound.url ?? null,
+          startsAt: ongoingRound.startsAt ?? null,
         },
       });
     } catch {
@@ -215,18 +272,50 @@ export async function getOngoingBroadcasts() {
   return broadcasts;
 }
 
+async function fetchBroadcastPGNText(roundId) {
+  // Primary: official API endpoint
+  const apiRes = await fetch(`${BASE}/broadcast/round/${roundId}/games`, {
+    headers: { Accept: "application/x-chess-pgn" },
+  });
+  console.log(`[broadcast] API round ${roundId} → status ${apiRes.status}`);
+  if (apiRes.ok) {
+    const text = await apiRes.text();
+    if (text.trim().startsWith("[")) return text;
+    console.warn(`[broadcast] API returned non-PGN for ${roundId}`);
+  }
+
+  // Fallback: web URL + .pgn (works for rounds the API rejects)
+  const roundUrl = roundUrlCache.get(roundId);
+  if (roundUrl) {
+    const webUrl = roundUrl.endsWith(".pgn") ? roundUrl : `${roundUrl}.pgn`;
+    console.log(`[broadcast] falling back to web PGN: ${webUrl}`);
+    const webRes = await fetch(webUrl, {
+      headers: { Accept: "application/x-chess-pgn, text/plain" },
+    });
+    console.log(`[broadcast] web PGN ${roundId} → status ${webRes.status}`);
+    if (webRes.ok) {
+      const text = await webRes.text();
+      if (text.trim().startsWith("[")) return text;
+    }
+  }
+
+  return null;
+}
+
 export async function getBroadcastGames(roundId) {
   const key = `bcast_${roundId}`;
   const cached = getCached(key);
   if (cached) return cached;
 
-  const res = await fetch(`${BASE}/broadcast/round/${roundId}/games`, {
-    headers: { Accept: "application/x-chess-pgn" },
-  });
-  if (!res.ok) return [];
+  const text = await fetchBroadcastPGNText(roundId);
+  if (!text) {
+    console.warn(`[broadcast] no PGN available for round ${roundId}`);
+    return [];
+  }
 
-  const text = await res.text();
+  console.log(`[broadcast] PGN length: ${text.length}, first 200:\n${text.slice(0, 200)}`);
   const games = parseBroadcastPGN(text);
+  console.log(`[broadcast] parsed ${games.length} games for round ${roundId}`);
   setCache(key, games, 3000);
   return games;
 }

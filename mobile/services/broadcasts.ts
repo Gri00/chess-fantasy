@@ -6,7 +6,7 @@ export interface Broadcast {
   slug: string;
   tier: number;
   image: string | null;
-  round: { id: string; name: string; url: string | null };
+  round: { id: string; name: string; url: string | null; startsAt: number | null };
 }
 
 export interface BroadcastGame {
@@ -19,6 +19,9 @@ export interface BroadcastGame {
   result: string;
   status: string;
   fen: string;
+  winChance: { white: number; black: number } | null;
+  timeControl: string | null;
+  clock: { white: string | null; black: string | null } | null;
 }
 
 export const broadcastService = {

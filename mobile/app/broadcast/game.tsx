@@ -14,7 +14,14 @@ import { broadcastService, BroadcastGame } from "../../services/broadcasts";
 import ChessBoard from "../../components/ChessBoard";
 import { C } from "../../constants/Colors";
 
-const POLL_MS = 4000;
+const PAGE_SIZE = 7;
+
+function getIntervalMs(timeControl: string | null): number {
+  if (!timeControl) return 30_000;
+  const base = parseInt(timeControl.split("+")[0] ?? "0", 10);
+  if (isNaN(base)) return 30_000;
+  return base >= 3600 ? 30_000 : 3_000;
+}
 
 export default function BroadcastGameScreen() {
   const { roundId, gameId, tournamentName, roundName } = useLocalSearchParams<{
@@ -29,7 +36,16 @@ export default function BroadcastGameScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [newMove, setNewMove] = useState(false);
+  const [movePage, setMovePage] = useState(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Derived — computed here so totalMovePages is available before early returns
+  const moveTokens = (game?.moves ?? "").trim().split(/\s+/).filter(Boolean);
+  const movePairs: [string, string][] = [];
+  for (let i = 0; i < moveTokens.length; i += 2) {
+    movePairs.push([moveTokens[i], moveTokens[i + 1] ?? ""]);
+  }
+  const totalMovePages = Math.ceil(movePairs.length / PAGE_SIZE);
 
   const fetchGame = async (initial = false) => {
     if (!roundId || !gameId) return;
@@ -48,6 +64,13 @@ export default function BroadcastGameScreen() {
         return found;
       });
 
+      if (initial) {
+        // Restart with the correct interval for this time control
+        const ms = getIntervalMs(found.timeControl);
+        if (pollRef.current) clearInterval(pollRef.current);
+        pollRef.current = setInterval(() => fetchGame(false), ms);
+      }
+
       // Stop polling once game is finished
       if (found.status !== "started") {
         if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
@@ -61,9 +84,14 @@ export default function BroadcastGameScreen() {
 
   useEffect(() => {
     fetchGame(true);
-    pollRef.current = setInterval(() => fetchGame(false), POLL_MS);
+    // Start with a default interval; fetchGame(initial=true) will restart with correct one
+    pollRef.current = setInterval(() => fetchGame(false), 4000);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [roundId, gameId]);
+
+  useEffect(() => {
+    if (totalMovePages > 0) setMovePage(totalMovePages - 1);
+  }, [totalMovePages]);
 
   if (loading) {
     return (
@@ -85,11 +113,6 @@ export default function BroadcastGameScreen() {
     );
   }
 
-  const moves = game.moves ? game.moves.trim().split(/\s+/).filter(Boolean) : [];
-  const movePairs: [string, string][] = [];
-  for (let i = 0; i < moves.length; i += 2) {
-    movePairs.push([moves[i], moves[i + 1] ?? ""]);
-  }
   const isLive = game.status === "started";
 
   const resultLabel = () => {
@@ -138,6 +161,7 @@ export default function BroadcastGameScreen() {
             <Text style={s.playerName} numberOfLines={1}>{game.white.name}</Text>
             {game.white.title ? <Text style={s.playerTitle}>{game.white.title}</Text> : null}
             <Text style={s.playerRating}>{game.white.rating ?? "—"}</Text>
+            {game.clock?.white ? <Text style={s.clockText}>{game.clock.white}</Text> : null}
           </View>
           <Text style={s.vsText}>VS</Text>
           <View style={[s.sideBox, { alignItems: "flex-end" }]}>
@@ -145,15 +169,31 @@ export default function BroadcastGameScreen() {
             <Text style={s.playerName} numberOfLines={1}>{game.black.name}</Text>
             {game.black.title ? <Text style={s.playerTitle}>{game.black.title}</Text> : null}
             <Text style={s.playerRating}>{game.black.rating ?? "—"}</Text>
+            {game.clock?.black ? <Text style={s.clockText}>{game.clock.black}</Text> : null}
           </View>
         </View>
+
+        {/* Win probability bar */}
+        {game.winChance && (
+          <View style={s.winSection}>
+            <View style={s.winBar}>
+              <View style={[s.winWhite, { flex: game.winChance.white }]} />
+              <View style={[s.winBlack, { flex: game.winChance.black }]} />
+            </View>
+            <View style={s.winLabels}>
+              <Text style={s.winLabelWhite}>{game.winChance.white}%</Text>
+              <Text style={s.winLabelCenter}>Win chances</Text>
+              <Text style={s.winLabelBlack}>{game.winChance.black}%</Text>
+            </View>
+          </View>
+        )}
       </LinearGradient>
 
       {/* Board */}
       <View style={s.section}>
         <View style={s.sectionTitleRow}>
           <Text style={s.sectionTitle}>
-            Position  <Text style={s.movesCount}>· {moves.length} moves</Text>
+            Position  <Text style={s.movesCount}>· {moveTokens.length} moves</Text>
           </Text>
           {newMove && (
             <View style={s.newMovePill}>
@@ -173,7 +213,7 @@ export default function BroadcastGameScreen() {
       {/* Opening */}
       {game.opening && (
         <View style={s.section}>
-          <Text style={s.sectionTitle}>Opening</Text>
+          <Text style={[s.sectionTitle, { marginBottom: 10 }]}>Opening</Text>
           <View style={s.infoCard}>
             <View style={s.infoRow}>
               <Text style={s.infoLabel}>Name</Text>
@@ -192,12 +232,19 @@ export default function BroadcastGameScreen() {
       {/* Moves */}
       {movePairs.length > 0 ? (
         <View style={s.section}>
-          <Text style={s.sectionTitle}>
-            Moves{movePairs.length > 20 ? "  (last 20)" : ""}
-          </Text>
+          <View style={s.sectionTitleRow}>
+            <Text style={s.sectionTitle}>
+              Moves  <Text style={s.movesCount}>· {moveTokens.length} half-moves</Text>
+            </Text>
+            {newMove && (
+              <View style={s.newMovePill}>
+                <Text style={s.newMovePillText}>NEW MOVE</Text>
+              </View>
+            )}
+          </View>
           <View style={s.movesCard}>
-            {movePairs.slice(-20).map((pair, i) => {
-              const moveNum = movePairs.length - Math.min(movePairs.length, 20) + i + 1;
+            {movePairs.slice(movePage * PAGE_SIZE, (movePage + 1) * PAGE_SIZE).map((pair, i) => {
+              const moveNum = movePage * PAGE_SIZE + i + 1;
               return (
                 <View key={i} style={[s.moveRow, i > 0 && s.moveRowBorder]}>
                   <Text style={s.moveNum}>{moveNum}.</Text>
@@ -207,6 +254,25 @@ export default function BroadcastGameScreen() {
               );
             })}
           </View>
+          {totalMovePages > 1 && (
+            <View style={s.paginationRow}>
+              <TouchableOpacity
+                style={[s.pageBtn, movePage === 0 && s.pageBtnDisabled]}
+                onPress={() => setMovePage(p => Math.max(0, p - 1))}
+                disabled={movePage === 0}
+              >
+                <Text style={[s.pageBtnText, movePage === 0 && s.pageBtnTextDisabled]}>‹</Text>
+              </TouchableOpacity>
+              <Text style={s.pageIndicator}>{movePage + 1} / {totalMovePages}</Text>
+              <TouchableOpacity
+                style={[s.pageBtn, movePage === totalMovePages - 1 && s.pageBtnDisabled]}
+                onPress={() => setMovePage(p => Math.min(totalMovePages - 1, p + 1))}
+                disabled={movePage === totalMovePages - 1}
+              >
+                <Text style={[s.pageBtnText, movePage === totalMovePages - 1 && s.pageBtnTextDisabled]}>›</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       ) : isLive ? (
         <View style={s.section}>
@@ -273,4 +339,21 @@ const s = StyleSheet.create({
 
   broadcastNote: { backgroundColor: C.dark3, borderRadius: 16, borderWidth: 1, borderColor: C.white6, paddingHorizontal: 16, paddingVertical: 18, alignItems: "center" },
   broadcastNoteText: { color: C.white40, fontSize: 13 },
+
+  winSection: { marginTop: 20 },
+  winBar: { flexDirection: "row", height: 6, borderRadius: 3, overflow: "hidden" },
+  winWhite: { backgroundColor: "#e8e8e8" },
+  winBlack: { backgroundColor: "#2a2a3a" },
+  winLabels: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 5 },
+  winLabelWhite: { color: "#e8e8e8", fontSize: 11, fontWeight: "700" },
+  winLabelCenter: { color: C.white35, fontSize: 10 },
+  winLabelBlack: { color: C.white40, fontSize: 11, fontWeight: "700" },
+  clockText: { color: C.gold, fontSize: 13, fontWeight: "700", marginTop: 4 },
+
+  paginationRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 16, marginTop: 12 },
+  pageBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: C.dark3, borderWidth: 1, borderColor: C.white8, alignItems: "center", justifyContent: "center" },
+  pageBtnDisabled: { opacity: 0.3 },
+  pageBtnText: { color: "#fff", fontSize: 20, fontWeight: "600", lineHeight: 22 },
+  pageBtnTextDisabled: { color: C.white35 },
+  pageIndicator: { color: C.white40, fontSize: 13, minWidth: 48, textAlign: "center" },
 });

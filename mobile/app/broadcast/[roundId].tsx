@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  TextInput,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -43,6 +44,7 @@ export default function BroadcastRoundScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(false);
+  const [search, setSearch] = useState("");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(async (initial = false) => {
@@ -137,6 +139,21 @@ export default function BroadcastRoundScreen() {
         </TouchableOpacity>
         <Text style={s.headerTitle} numberOfLines={1}>{name ?? "Tournament"}</Text>
         <Text style={s.headerSub}>{roundName ?? "Round"}</Text>
+        <View style={s.searchBox}>
+          <Text style={s.searchIcon}>🔍</Text>
+          <TextInput
+            style={s.searchInput}
+            placeholder="Search by player…"
+            placeholderTextColor={C.white35}
+            value={search}
+            onChangeText={setSearch}
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch("")}>
+              <Text style={s.searchClear}>✕</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {loading ? (
@@ -153,7 +170,16 @@ export default function BroadcastRoundScreen() {
         </View>
       ) : (
         <FlatList
-          data={games}
+          data={games.filter((g) => {
+            if (!search) return true;
+            const q = search.toLowerCase();
+            return (
+              g.white.name.toLowerCase().includes(q) ||
+              g.black.name.toLowerCase().includes(q) ||
+              (g.white.title ?? "").toLowerCase().includes(q) ||
+              (g.black.title ?? "").toLowerCase().includes(q)
+            );
+          })}
           keyExtractor={(item) => item.id}
           renderItem={renderGame}
           contentContainerStyle={s.list}
@@ -185,6 +211,11 @@ const s = StyleSheet.create({
   backLabel: { color: C.white40, fontSize: 14 },
   headerTitle: { color: "#fff", fontSize: 20, fontWeight: "800", marginBottom: 2 },
   headerSub: { color: C.white40, fontSize: 13 },
+
+  searchBox: { flexDirection: "row", alignItems: "center", backgroundColor: C.dark3, borderRadius: 13, borderWidth: 1, borderColor: C.white8, paddingHorizontal: 12, marginTop: 10 },
+  searchIcon: { fontSize: 14, marginRight: 8 },
+  searchInput: { flex: 1, color: "#fff", paddingVertical: 11, fontSize: 14 },
+  searchClear: { color: C.white35, fontSize: 14, paddingLeft: 8 },
 
   list: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 32 },
   center: { alignItems: "center", paddingTop: 80 },

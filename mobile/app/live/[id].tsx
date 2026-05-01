@@ -15,6 +15,7 @@ import ChessBoard from "../../components/ChessBoard";
 import { C } from "../../constants/Colors";
 
 const POLL_INTERVAL_MS = 3000;
+const PAGE_SIZE = 7;
 
 //Screen
 
@@ -29,9 +30,16 @@ export default function GameDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [isLive, setIsLive] = useState(false);
-  const [lastMoveCount, setLastMoveCount] = useState(0);
   const [newMove, setNewMove] = useState(false);
+  const [movePage, setMovePage] = useState(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const moveTokens = ((game as any)?.moves ?? "").trim().split(/\s+/).filter(Boolean) as string[];
+  const movePairs: [string, string][] = [];
+  for (let i = 0; i < moveTokens.length; i += 2) {
+    movePairs.push([moveTokens[i], moveTokens[i + 1] ?? ""]);
+  }
+  const totalMovePages = Math.ceil(movePairs.length / PAGE_SIZE);
 
   const fetchGame = async (initial = false) => {
     if (!id) return;
@@ -49,7 +57,6 @@ export default function GameDetailScreen() {
           setNewMove(true);
           setTimeout(() => setNewMove(false), 1200);
         }
-        setLastMoveCount(nextMoves);
         return g;
       });
       setIsLive(live);
@@ -81,6 +88,10 @@ export default function GameDetailScreen() {
     return () => stopPolling();
   }, [id]);
 
+  useEffect(() => {
+    if (totalMovePages > 0) setMovePage(totalMovePages - 1);
+  }, [totalMovePages]);
+
   if (loading) {
     return (
       <View style={[s.center, { paddingTop: insets.top }]}>
@@ -103,13 +114,6 @@ export default function GameDetailScreen() {
 
   const white = game.players?.white;
   const black = game.players?.black;
-  const moves: string[] = game.moves
-    ? game.moves.trim().split(/\s+/).filter(Boolean)
-    : [];
-  const movePairs: [string, string][] = [];
-  for (let i = 0; i < moves.length; i += 2) {
-    movePairs.push([moves[i], moves[i + 1] ?? ""]);
-  }
 
   return (
     <ScrollView
@@ -168,7 +172,7 @@ export default function GameDetailScreen() {
       <View style={s.section}>
         <View style={s.sectionTitleRow}>
           <Text style={s.sectionTitle}>
-            Position <Text style={s.movesCount}>· {moves.length} moves</Text>
+            Position <Text style={s.movesCount}>· {moveTokens.length} moves</Text>
           </Text>
           {newMove && (
             <View style={s.newMovePill}>
@@ -188,7 +192,7 @@ export default function GameDetailScreen() {
       {/* Opening */}
       {game.opening && (
         <View style={s.section}>
-          <Text style={s.sectionTitle}>Opening</Text>
+          <Text style={[s.sectionTitle, { marginBottom: 10 }]}>Opening</Text>
           <View style={s.infoCard}>
             <View style={s.infoRow}>
               <Text style={s.infoLabel}>Name</Text>
@@ -206,16 +210,22 @@ export default function GameDetailScreen() {
         </View>
       )}
 
-      {/* Moves list (last 20) */}
+      {/* Moves list */}
       {movePairs.length > 0 ? (
         <View style={s.section}>
-          <Text style={s.sectionTitle}>
-            Moves{movePairs.length > 20 ? "  (last 20)" : ""}
-          </Text>
+          <View style={s.sectionTitleRow}>
+            <Text style={s.sectionTitle}>
+              Moves  <Text style={s.movesCount}>· {moveTokens.length} half-moves</Text>
+            </Text>
+            {newMove && (
+              <View style={s.newMovePill}>
+                <Text style={s.newMovePillText}>NEW MOVE</Text>
+              </View>
+            )}
+          </View>
           <View style={s.movesCard}>
-            {movePairs.slice(-20).map((pair, i) => {
-              const moveNum =
-                movePairs.length - Math.min(movePairs.length, 20) + i + 1;
+            {movePairs.slice(movePage * PAGE_SIZE, (movePage + 1) * PAGE_SIZE).map((pair, i) => {
+              const moveNum = movePage * PAGE_SIZE + i + 1;
               return (
                 <View key={i} style={[s.moveRow, i > 0 && s.moveRowBorder]}>
                   <Text style={s.moveNum}>{moveNum}.</Text>
@@ -225,6 +235,25 @@ export default function GameDetailScreen() {
               );
             })}
           </View>
+          {totalMovePages > 1 && (
+            <View style={s.paginationRow}>
+              <TouchableOpacity
+                style={[s.pageBtn, movePage === 0 && s.pageBtnDisabled]}
+                onPress={() => setMovePage(p => Math.max(0, p - 1))}
+                disabled={movePage === 0}
+              >
+                <Text style={[s.pageBtnText, movePage === 0 && s.pageBtnTextDisabled]}>‹</Text>
+              </TouchableOpacity>
+              <Text style={s.pageIndicator}>{movePage + 1} / {totalMovePages}</Text>
+              <TouchableOpacity
+                style={[s.pageBtn, movePage === totalMovePages - 1 && s.pageBtnDisabled]}
+                onPress={() => setMovePage(p => Math.min(totalMovePages - 1, p + 1))}
+                disabled={movePage === totalMovePages - 1}
+              >
+                <Text style={[s.pageBtnText, movePage === totalMovePages - 1 && s.pageBtnTextDisabled]}>›</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       ) : isLive ? (
         <View style={s.section}>
@@ -413,4 +442,11 @@ const s = StyleSheet.create({
   moveNum: { color: C.white35, fontSize: 12, width: 28 },
   moveWhite: { color: "#fff", fontSize: 13, fontWeight: "600", flex: 1 },
   moveBlack: { color: C.white40, fontSize: 13, flex: 1 },
+
+  paginationRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 16, marginTop: 12 },
+  pageBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: C.dark3, borderWidth: 1, borderColor: C.white8, alignItems: "center", justifyContent: "center" },
+  pageBtnDisabled: { opacity: 0.3 },
+  pageBtnText: { color: "#fff", fontSize: 20, fontWeight: "600", lineHeight: 22 },
+  pageBtnTextDisabled: { color: C.white35 },
+  pageIndicator: { color: C.white40, fontSize: 13, minWidth: 48, textAlign: "center" },
 });

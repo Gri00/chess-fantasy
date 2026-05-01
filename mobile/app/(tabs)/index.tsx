@@ -23,11 +23,21 @@ const MOCK_LINEUP = [
   { name: "Aronian", piece: "♝", pts: 70, isCap: false },
 ];
 
+function progCapMin(timeControl?: string | null): number {
+  if (!timeControl) return 240;
+  const base = parseInt(timeControl.split("+")[0], 10);
+  if (isNaN(base)) return 240;
+  if (base >= 3600) return 240; // classical ≤ 4h
+  if (base >= 600) return 60;   // rapid ≤ 1h
+  return 15;                    // blitz ≤ 15min
+}
+
 interface HomeLiveItem {
   p1: string;
   p2: string;
   status: string;
   prog: number;
+  startsAt?: number;
   type: "broadcast" | "tv";
   roundId?: string;
   gameId?: string;
@@ -74,12 +84,23 @@ export default function HomeScreen() {
                   const moveCount = g.moves
                     ? g.moves.trim().split(/\s+/).filter(Boolean).length
                     : 0;
+                  const startsAt = top.round.startsAt ?? undefined;
+                  let elapsedLabel = "";
+                  let prog = 50;
+                  if (startsAt) {
+                    const elapsedMin = Math.floor((Date.now() - startsAt) / 60_000);
+                    const h = Math.floor(elapsedMin / 60);
+                    const m = elapsedMin % 60;
+                    elapsedLabel = h > 0 ? `${h}h ${m}m` : `${m}m`;
+                    prog = Math.min(95, Math.round((elapsedMin / progCapMin(g.timeControl)) * 100));
+                  }
                   return {
                     type: "broadcast" as const,
                     p1: g.white.name,
                     p2: g.black.name,
-                    status: `Move ${moveCount}${g.opening ? " · " + g.opening.name : ""}`,
-                    prog: Math.min(Math.round(moveCount * 1.8), 92),
+                    status: `Move ${moveCount} · ${elapsedLabel || (g.opening?.name ?? "")}`,
+                    prog,
+                    startsAt,
                     roundId: top.round.id,
                     gameId: g.id,
                     tournamentName: top.name,
