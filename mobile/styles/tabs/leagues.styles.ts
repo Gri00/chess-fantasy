@@ -91,30 +91,22 @@ export const s = StyleSheet.create({
     letterSpacing: 1,
   },
 
-  // Modal / sheet
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
+  // Modal / dialog
+  modalBackdrop: {
     backgroundColor: "rgba(0,0,0,0.75)",
   },
-  sheet: {
+  dialog: {
+    position: "absolute",
+    left: 24,
+    right: 24,
+    top: "30%",
     backgroundColor: C.dark2,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    borderRadius: 24,
     padding: 24,
-    paddingBottom: 48,
-    borderTopWidth: 1,
+    borderWidth: 1,
     borderColor: C.gold33,
   },
-  sheetHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: C.white10,
-    alignSelf: "center",
-    marginBottom: 20,
-  },
-  sheetTitle: {
+  dialogTitle: {
     color: "#fff",
     fontSize: 20,
     fontWeight: "700",

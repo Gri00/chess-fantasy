@@ -9,8 +9,7 @@ import {
   Modal,
   TextInput,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
+  StyleSheet,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -242,102 +241,102 @@ export default function LeaguesScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* ── Create Modal ── */}
-      <Modal visible={showCreate} animationType="slide" transparent>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={s.modalOverlay}
-        >
-          <View style={s.sheet}>
-            <View style={s.sheetHandle} />
-            <Text style={s.sheetTitle}>New League</Text>
-            <GoldInput
-              placeholder="League name"
-              value={name}
-              onChangeText={setName}
-            />
-            <GoldInput
-              placeholder="Your team name"
-              value={teamName}
-              onChangeText={setTeamName}
-            />
-            <TouchableOpacity
-              onPress={handleCreate}
-              disabled={creating}
-              activeOpacity={0.85}
+      {/* ── Create Dialog ── */}
+      <Modal visible={showCreate} animationType="fade" transparent>
+        <TouchableOpacity
+          style={[StyleSheet.absoluteFill, s.modalBackdrop]}
+          activeOpacity={1}
+          onPress={() => setShowCreate(false)}
+        />
+        <View style={s.dialog}>
+          <Text style={s.dialogTitle}>New League</Text>
+          <GoldInput
+            placeholder="League name"
+            value={name}
+            onChangeText={setName}
+          />
+          <GoldInput
+            placeholder="Your team name"
+            value={teamName}
+            onChangeText={setTeamName}
+          />
+          <TouchableOpacity
+            onPress={handleCreate}
+            disabled={creating}
+            activeOpacity={0.85}
+            style={{ marginTop: 8 }}
+          >
+            <LinearGradient
+              colors={[C.gold, C.gold2]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={s.sheetBtn}
             >
-              <LinearGradient
-                colors={[C.gold, C.gold2]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={s.sheetBtn}
-              >
-                {creating ? (
-                  <ActivityIndicator color={C.dark} />
-                ) : (
-                  <Text style={s.sheetBtnText}>CREATE</Text>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={s.cancelBtn}
-              onPress={() => setShowCreate(false)}
-            >
-              <Text style={s.cancelText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
+              {creating ? (
+                <ActivityIndicator color={C.dark} />
+              ) : (
+                <Text style={s.sheetBtnText}>CREATE</Text>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={s.cancelBtn}
+            onPress={() => setShowCreate(false)}
+          >
+            <Text style={s.cancelText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
       </Modal>
 
-      {/* ── Join Modal ── */}
-      <Modal visible={showJoin} animationType="slide" transparent>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={s.modalOverlay}
-        >
-          <View style={s.sheet}>
-            <View style={s.sheetHandle} />
-            <Text style={s.sheetTitle}>Join League</Text>
-            <GoldInput
-              placeholder="Invite code (e.g. CA8265DB)"
-              value={inviteCode}
-              onChangeText={(t) =>
-                setInviteCode(t.replace(/\s/g, "").toUpperCase())
-              }
-              autoCapitalize="characters"
-              maxLength={8}
-            />
-            <GoldInput
-              placeholder="Your team name"
-              value={joinTeamName}
-              onChangeText={setJoinTeamName}
-            />
-            <TouchableOpacity
-              onPress={handleJoin}
-              disabled={joining}
-              activeOpacity={0.85}
+      {/* ── Join Dialog ── */}
+      <Modal visible={showJoin} animationType="fade" transparent>
+        <TouchableOpacity
+          style={[StyleSheet.absoluteFill, s.modalBackdrop]}
+          activeOpacity={1}
+          onPress={() => setShowJoin(false)}
+        />
+        <View style={s.dialog}>
+          <Text style={s.dialogTitle}>Join League</Text>
+          <GoldInput
+            placeholder="Invite code (e.g. CA8265DB)"
+            value={inviteCode}
+            onChangeText={(t) =>
+              setInviteCode(t.replace(/\s/g, "").toUpperCase())
+            }
+            autoCapitalize="characters"
+            maxLength={8}
+          />
+          <GoldInput
+            placeholder="Your team name"
+            value={joinTeamName}
+            onChangeText={setJoinTeamName}
+          />
+          <TouchableOpacity
+            onPress={handleJoin}
+            disabled={joining}
+            activeOpacity={0.85}
+            style={{ marginTop: 8 }}
+          >
+            <LinearGradient
+              colors={[C.gold, C.gold2]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={s.sheetBtn}
             >
-              <LinearGradient
-                colors={[C.gold, C.gold2]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={s.sheetBtn}
-              >
-                {joining ? (
-                  <ActivityIndicator color={C.dark} />
-                ) : (
-                  <Text style={s.sheetBtnText}>JOIN</Text>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={s.cancelBtn}
-              onPress={() => setShowJoin(false)}
-            >
-              <Text style={s.cancelText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
+              {joining ? (
+                <ActivityIndicator color={C.dark} />
+              ) : (
+                <Text style={s.sheetBtnText}>JOIN</Text>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={s.cancelBtn}
+            onPress={() => setShowJoin(false)}
+          >
+            <Text style={s.cancelText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
       </Modal>
     </View>
   );

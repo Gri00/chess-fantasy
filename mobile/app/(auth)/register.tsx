@@ -7,8 +7,6 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 import { Link } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -49,11 +47,8 @@ export default function RegisterScreen() {
       <Text style={[styles.floatingPiece, { top: 120, right: 24 }]}>♙</Text>
       <Text style={[styles.floatingPiece, { bottom: 140, left: 20 }]}>♗</Text>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.kav}
-      >
-        <ScrollView
+      <ScrollView
+        automaticallyAdjustKeyboardInsets
           contentContainerStyle={styles.inner}
           keyboardShouldPersistTaps="handled"
           bounces={false}
@@ -136,8 +131,7 @@ export default function RegisterScreen() {
               </Text>
             </TouchableOpacity>
           </Link>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </ScrollView>
     </LinearGradient>
   );
 }
