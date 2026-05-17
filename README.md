@@ -17,18 +17,25 @@ chess-fantasy/
 
 ## Pokretanje — Backend
 
+### Windows (PowerShell)
+
 ```powershell
 cd M:\projects\chess-fantasy\backend
 
-# Instaliraj dependencies (samo prvi put)
 npm install
-
-# Pokreni development server
 npm run dev
-
-# Server radi na http://localhost:3000
-# Health check: http://localhost:3000/health
 ```
+
+### Mac (Terminal / zsh)
+
+```bash
+cd ~/Projects/chess-fantasy/backend
+
+npm install
+npm run dev
+```
+
+> Server radi na `http://localhost:3000` — health check: `http://localhost:3000/health`
 
 ### Environment varijable (`backend/.env`)
 
@@ -45,23 +52,87 @@ DATABASE_URL=postgresql://postgres:...
 
 ## Pokretanje — Mobile
 
+### Windows (PowerShell)
+
 ```powershell
 cd M:\projects\chess-fantasy\mobile
 
-# Instaliraj dependencies (samo prvi put)
 npm install
-
-# Pokreni Expo
 npx expo start
-
-# Opcije nakon pokretanja:
-# i — iOS simulator (treba Mac)
-# a — Android emulator
-# Skeniraj QR kod — otvori u Expo Go na iPhoneu
 ```
 
+### Mac (Terminal / zsh)
+
+```bash
+cd ~/Projects/chess-fantasy/mobile
+
+npm install
+npx expo start
+```
+
+**Opcije nakon pokretanja:**
+- `i` — iOS simulator (Mac only)
+- `a` — Android emulator
+- `s` — prebaci na Expo Go / Development Build
+- Skeniraj QR kod telefonom
+
 > **Važno:** Backend mora da radi pre nego što pokreneš mobile app.
-> Provjeri IP adresu u `mobile/services/api.ts` — mora da matchuje IP iz nodemon loga.
+> Provjeri IP adresu u `mobile/services/api.ts` — mora da matchuje tvoj lokalni IP.
+
+---
+
+## iOS Development Build (umesto Expo Go)
+
+Sa Apple Developer Accountom možeš buildovati sopstvenu dev app koja nema ograničenja Expo Go sandboxa.
+
+### Setup (jednom)
+
+```bash
+# Instaliraj expo-dev-client
+cd ~/Projects/chess-fantasy/mobile
+npx expo install expo-dev-client
+
+# Prijavi se na EAS
+npx eas-cli login
+
+# Povezi Apple credentials (certifikati, APNs)
+npx eas-cli credentials --platform ios
+
+# Napravi development build i instaliraj na iPhone
+npx eas-cli build --profile development --platform ios
+```
+
+### Svakodnevni razvoj
+
+```bash
+cd ~/Projects/chess-fantasy/mobile
+
+# Pokreni dev server (otvoriš na Development Build app na iPhoneu)
+npx expo start --dev-client
+```
+
+### EAS Build profili (`eas.json`)
+
+```json
+{
+  "cli": { "version": ">= 14.0.0" },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal"
+    },
+    "production": {}
+  },
+  "submit": {
+    "production": {}
+  }
+}
+```
+
+> Napravi `eas.json` fajl u `mobile/` folderu sa sadržajem iznad.
 
 ---
 
@@ -81,20 +152,13 @@ supabase/migrations/20240005_seed_players.sql
 
 ## Git — svakodnevne komande
 
-```powershell
-# Provjeri status promjena
+Git komande su iste na Windowsu i Macu:
+
+```bash
 git status
-
-# Dodaj sve promene
 git add .
-
-# Commit sa porukom
 git commit -m "feat: opis promene"
-
-# Push na GitHub
 git push origin main
-
-# Pull najnovije promene
 git pull origin main
 ```
 
@@ -111,7 +175,53 @@ chore: ostalo (dependencies, config...)
 
 ---
 
-## Testiranje API endpointa (PowerShell)
+## Testiranje API endpointa
+
+### Mac (Terminal / zsh)
+
+```bash
+# Login i čuvanje tokena
+TOKEN=$(curl -s -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@test.com","password":"123456"}' | jq -r '.token')
+
+# Health check
+curl http://localhost:3000/health
+
+# Moje lige
+curl http://localhost:3000/leagues/mine \
+  -H "Authorization: Bearer $TOKEN"
+
+# Svi igrači
+curl http://localhost:3000/players \
+  -H "Authorization: Bearer $TOKEN"
+
+# Igrači po tieru
+curl "http://localhost:3000/players?tier=S" \
+  -H "Authorization: Bearer $TOKEN"
+
+# Kreiraj ligu
+curl -X POST http://localhost:3000/leagues \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"name":"Test Liga","team_name":"Moj Tim","roster_size":5}'
+
+# Pridruži se ligi
+curl -X POST http://localhost:3000/leagues/join \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"invite_code":"XXXXXXXX","team_name":"Moj Tim"}'
+
+# Dodaj igrača na roster
+curl -X POST http://localhost:3000/players/roster/LEAGUE_ID \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"chess_player_id":"PLAYER_ID"}'
+```
+
+> `jq` je potreban za parsiranje JSON-a — instaliraj sa `brew install jq`
+
+### Windows (PowerShell)
 
 ```powershell
 # Login i čuvanje tokena
@@ -119,47 +229,18 @@ $response = curl -Method POST http://localhost:3000/auth/login `
   -ContentType "application/json" `
   -Body '{"email":"test@test.com","password":"123456"}' `
   -UseBasicParsing
-$json = $response.Content | ConvertFrom-Json
-$token = $json.token
+$token = ($response.Content | ConvertFrom-Json).token
 
 # Health check
 curl http://localhost:3000/health -UseBasicParsing
 
 # Moje lige
 curl http://localhost:3000/leagues/mine `
-  -Headers @{"Authorization"="Bearer $token"} `
-  -UseBasicParsing
+  -Headers @{"Authorization"="Bearer $token"} -UseBasicParsing
 
 # Svi igrači
 curl http://localhost:3000/players `
-  -Headers @{"Authorization"="Bearer $token"} `
-  -UseBasicParsing
-
-# Igrači po tieru
-curl "http://localhost:3000/players?tier=S" `
-  -Headers @{"Authorization"="Bearer $token"} `
-  -UseBasicParsing
-
-# Kreiraj ligu
-curl -Method POST http://localhost:3000/leagues `
-  -ContentType "application/json" `
-  -Headers @{"Authorization"="Bearer $token"} `
-  -Body '{"name":"Test Liga","team_name":"Moj Tim","roster_size":5}' `
-  -UseBasicParsing
-
-# Pridruži se ligi
-curl -Method POST http://localhost:3000/leagues/join `
-  -ContentType "application/json" `
-  -Headers @{"Authorization"="Bearer $token"} `
-  -Body '{"invite_code":"XXXXXXXX","team_name":"Moj Tim"}' `
-  -UseBasicParsing
-
-# Dodaj igrača na roster
-curl -Method POST http://localhost:3000/players/roster/LEAGUE_ID `
-  -ContentType "application/json" `
-  -Headers @{"Authorization"="Bearer $token"} `
-  -Body '{"chess_player_id":"PLAYER_ID"}' `
-  -UseBasicParsing
+  -Headers @{"Authorization"="Bearer $token"} -UseBasicParsing
 ```
 
 ---
