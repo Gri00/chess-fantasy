@@ -14,6 +14,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { leagueService } from "../../services/leagues";
 import { playerService } from "../../services/players";
 import { useAuthStore } from "../../stores/useAuthStore";
+import { C } from "../../constants/Colors";
 import { styles } from "../../styles/league/leagueDetail.styles";
 
 const TIER_COLORS: Record<string, string> = {
@@ -75,7 +76,7 @@ export default function LeagueDetailScreen() {
   if (loading)
     return (
       <View style={styles.center}>
-        <ActivityIndicator color="#22c55e" size="large" />
+        <ActivityIndicator color={C.gold} size="large" />
       </View>
     );
 
@@ -97,7 +98,7 @@ export default function LeagueDetailScreen() {
                 styles.statusDot,
                 {
                   backgroundColor:
-                    league?.status === "active" ? "#22c55e" : "#f59e0b",
+                    league?.status === "active" ? C.green : C.gold,
                 },
               ]}
             />
@@ -152,7 +153,7 @@ export default function LeagueDetailScreen() {
               setRefreshing(true);
               load();
             }}
-            tintColor="#22c55e"
+            tintColor={C.gold}
           />
         }
       >
@@ -264,12 +265,12 @@ export default function LeagueDetailScreen() {
               {league?.status === "pending" && (
                 <View
                   style={{
-                    backgroundColor: "#f59e0b22",
+                    backgroundColor: C.gold18,
                     borderRadius: 10,
                     padding: 10,
                     marginBottom: 12,
                     borderWidth: 1,
-                    borderColor: "#f59e0b44",
+                    borderColor: C.gold33,
                     flexDirection: "row",
                     alignItems: "center",
                     gap: 8,
@@ -278,7 +279,7 @@ export default function LeagueDetailScreen() {
                   <Text style={{ fontSize: 16 }}>⏳</Text>
                   <Text
                     style={{
-                      color: "#f59e0b",
+                      color: C.gold,
                       fontSize: 13,
                       fontWeight: "500",
                     }}
@@ -353,7 +354,7 @@ export default function LeagueDetailScreen() {
                       </Text>
                     </TouchableOpacity>
                   ) : (
-                    <Text style={{ color: "#888", fontSize: 13 }}>View →</Text>
+                    <Text style={{ color: C.gold, fontSize: 13 }}>View →</Text>
                   )}
                 </TouchableOpacity>
               ))
@@ -365,7 +366,7 @@ export default function LeagueDetailScreen() {
               standings.map((item, index) => (
                 <View key={item.league_member_id} style={styles.standingRow}>
                   <Text
-                    style={[styles.rank, index < 3 && { color: "#f59e0b" }]}
+                    style={[styles.rank, index < 3 && { color: C.gold }]}
                   >
                     #{item.rank}
                   </Text>

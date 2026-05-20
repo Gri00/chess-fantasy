@@ -1,7 +1,7 @@
 import axios from 'axios'
 import * as SecureStore from 'expo-secure-store'
 
-const BASE_URL = 'http://192.168.64.101:3000'  // tvoj backend IP iz nodemon loga
+const BASE_URL = 'http://192.168.64.119:3000'
 
 export const api = axios.create({
   baseURL: BASE_URL,
