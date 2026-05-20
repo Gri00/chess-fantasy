@@ -14,6 +14,10 @@ chess-fantasy/
 ```
 
 ---
+EAS Build:
+
+Pokreni npx eas-cli init u mobile/ folderu — generiše novi projectId i linkuje za njihov nalog.
+---
 
 ## Pokretanje — Backend
 
