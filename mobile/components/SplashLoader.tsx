@@ -30,13 +30,11 @@ export default function SplashLoader() {
 
   return (
     <LinearGradient colors={["#1a0a3a", C.dark]} style={styles.container}>
-      {/* Floating corner pieces */}
       <Text style={[styles.floatingPiece, { top: 180, left: 32 }]}>♖</Text>
       <Text style={[styles.floatingPiece, { top: 160, right: 32 }]}>♗</Text>
       <Text style={[styles.floatingPiece, { bottom: 220, left: 28 }]}>♘</Text>
       <Text style={[styles.floatingPiece, { bottom: 200, right: 28 }]}>♙</Text>
 
-      {/* Logo box */}
       <View style={styles.logoBox}>
         <Text style={styles.logoIcon}>♔</Text>
       </View>
@@ -48,7 +46,6 @@ export default function SplashLoader() {
 
       <Text style={styles.tagline}>Draft. Duel. Dominate.</Text>
 
-      {/* Loading bar */}
       <View style={styles.loadingTrack}>
         <Animated.View style={[styles.loadingBar, { width: barWidth }]} />
       </View>

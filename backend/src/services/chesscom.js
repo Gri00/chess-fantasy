@@ -1,6 +1,3 @@
-// Chess.com public API — no auth required
-// Docs: https://www.chess.com/news/view/published-data-api
-
 const BASE = 'https://api.chess.com/pub'
 
 const HEADERS = {
@@ -8,7 +5,6 @@ const HEADERS = {
   'Accept': 'application/json',
 }
 
-// ── Cache ────────────────────────────────────────────────────────────────────
 const cache = new Map()
 
 function getCached(key) {
@@ -23,13 +19,10 @@ function setCache(key, data, ttlMs) {
 }
 
 const TTL = {
-  leaderboard: 5 * 60 * 1000,  // 5 min
-  player:      5 * 60 * 1000,  // 5 min
+  leaderboard: 5 * 60 * 1000,
+  player:      5 * 60 * 1000,
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-// Tier by rank in our combined leaderboard — more reliable than absolute rating
-// (Chess.com ratings differ wildly across formats)
 function getTierByRank(rank) {
   if (rank <= 10)  return 'S'
   if (rank <= 30)  return 'A'
@@ -38,7 +31,6 @@ function getTierByRank(rank) {
   return 'D'
 }
 
-// Used only for detail view where we have a single player outside leaderboard context
 function getTierByRating(rating) {
   if (!rating) return 'D'
   if (rating >= 3000) return 'S'
@@ -70,8 +62,8 @@ function formatLeaderboardPlayer(p, format, rank) {
     full_name:        p.name || p.username,
     title:            p.title ?? null,
     fide_rating:      rating,
-    rating_format:    format,     // 'classical' | 'rapid' | 'blitz'
-    rank:             rank,       // rank within our combined list
+    rating_format:    format,
+    rank:             rank,
     country_code:     extractCountry(p.country),
     tier:             getTierByRank(rank),
     is_active:        true,
@@ -86,7 +78,6 @@ function formatPlayerProfile(profile, stats) {
   const blitz     = stats?.chess_blitz?.last?.rating     ?? null
   const bullet    = stats?.chess_bullet?.last?.rating    ?? null
 
-  // Use best classical → rapid → blitz for tier; these are Chess.com live ratings
   const primaryRating = classical ?? rapid ?? blitz ?? bullet ?? null
 
   return {
@@ -111,12 +102,6 @@ function formatPlayerProfile(profile, stats) {
   }
 }
 
-// ── Exports ──────────────────────────────────────────────────────────────────
-
-/**
- * Top players combined from classical + rapid + blitz leaderboards
- * Deduped and sorted by rating descending
- */
 export async function getTopPlayers() {
   const key = 'top_players'
   const cached = getCached(key)
@@ -139,7 +124,6 @@ export async function getTopPlayers() {
     }
   }
 
-  // Sort by score descending first, then assign rank-based tiers
   raw.sort((a, b) => (b.p.score ?? 0) - (a.p.score ?? 0))
   const players = raw.map(({ p, format }, i) =>
     formatLeaderboardPlayer(p, format, i + 1)
@@ -149,11 +133,6 @@ export async function getTopPlayers() {
   return players
 }
 
-/**
- * Single player by Chess.com username — fetches profile + stats.
- * If the player exists in the cached leaderboard, their rank and tier
- * from the list are used so both screens always show the same value.
- */
 export async function getPlayer(username) {
   const key = `player_${username.toLowerCase()}`
   const cached = getCached(key)
@@ -170,7 +149,6 @@ export async function getPlayer(username) {
   if (!profile) return null
   const player = formatPlayerProfile(profile, stats)
 
-  // Sync tier and rank with list view
   const listEntry = topList?.find(p => p.id === username.toLowerCase())
   if (listEntry) {
     player.tier          = listEntry.tier
@@ -182,9 +160,6 @@ export async function getPlayer(username) {
   return player
 }
 
-/**
- * Search — filters cached leaderboard, falls back to direct username lookup
- */
 export async function searchPlayers(term) {
   if (!term || term.length < 2) return []
 

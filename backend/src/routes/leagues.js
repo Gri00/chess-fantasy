@@ -435,7 +435,6 @@ export default async function leagueRoutes(app) {
     },
   );
 
-  // ─── IZBACI ČLANA (samo komisar) ────────────────────────────
   app.delete(
     "/:id/members/:userId",
     {
@@ -444,7 +443,6 @@ export default async function leagueRoutes(app) {
     async (request, reply) => {
       const { id, userId } = request.params;
 
-      // Proveri da li je komisar
       const { data: league } = await supabaseAdmin
         .from("leagues")
         .select("commissioner_id")
@@ -457,7 +455,6 @@ export default async function leagueRoutes(app) {
           .send({ error: "Only the commissioner can remove members" });
       }
 
-      // Komisar ne može da izbaci samog sebe
       if (userId === request.user.id) {
         return reply
           .code(400)
@@ -478,7 +475,6 @@ export default async function leagueRoutes(app) {
     },
   );
 
-  // ─── OBRIŠI LIGU (samo komisar) ─────────────────────────────
   app.delete(
     "/:id",
     {

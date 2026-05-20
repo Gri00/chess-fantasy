@@ -2,7 +2,7 @@ import { supabaseAdmin } from "../services/supabase.js";
 import authenticate from "../middleware/authenticate.js";
 
 export default async function authRoutes(app) {
-  // ─── REGISTER ───────────────────────────────────────────────
+  // ─── REGISTER
   app.post(
     "/register",
     {
@@ -21,7 +21,6 @@ export default async function authRoutes(app) {
     async (request, reply) => {
       const { email, password, username } = request.body;
 
-      // Proveri da username nije zauzet
       const { data: existing } = await supabaseAdmin
         .from("users")
         .select("id")
@@ -32,17 +31,15 @@ export default async function authRoutes(app) {
         return reply.code(409).send({ error: "Username is already taken" });
       }
 
-      // Kreiraj user u Supabase Auth
       const { data: authData, error: authError } =
         await supabaseAdmin.auth.admin.createUser({
           email,
           password,
-          email_confirm: true, // skip email verification za MVP
+          email_confirm: true,
           user_metadata: { username },
         });
 
       if (authError) {
-        // Email već postoji
         if (authError.message.includes("already registered")) {
           return reply.code(409).send({ error: "Email already registered" });
         }
@@ -50,15 +47,12 @@ export default async function authRoutes(app) {
         return reply.code(500).send({ error: "Error during registration" });
       }
 
-      // Trigger handle_new_user automatski kreira public.users red
-      // Dohvati kreiran profil
       const { data: profile } = await supabaseAdmin
         .from("users")
         .select("*")
         .eq("id", authData.user.id)
         .single();
 
-      // Generiši JWT
       const token = app.jwt.sign(
         { id: authData.user.id, username },
         { expiresIn: "7d" },
@@ -76,7 +70,6 @@ export default async function authRoutes(app) {
     },
   );
 
-  // ─── LOGIN ──────────────────────────────────────────────────
   app.post(
     "/login",
     {
@@ -94,7 +87,6 @@ export default async function authRoutes(app) {
     async (request, reply) => {
       const { email, password } = request.body;
 
-      // Supabase Auth login
       const { data: authData, error: authError } =
         await supabaseAdmin.auth.signInWithPassword({
           email,
@@ -105,7 +97,6 @@ export default async function authRoutes(app) {
         return reply.code(401).send({ error: "Invalid email or password" });
       }
 
-      // Dohvati profil
       const { data: profile, error: profileError } = await supabaseAdmin
         .from("users")
         .select("*")
@@ -116,7 +107,6 @@ export default async function authRoutes(app) {
         return reply.code(404).send({ error: "Profile not found" });
       }
 
-      // Generiši naš JWT (koristimo sopstveni, ne Supabase token)
       const token = app.jwt.sign(
         { id: profile.id, username: profile.username },
         { expiresIn: "7d" },
@@ -134,7 +124,6 @@ export default async function authRoutes(app) {
     },
   );
 
-  // ─── GET ME (trenutno ulogovani user) ───────────────────────
   app.get(
     "/me",
     {
@@ -157,7 +146,6 @@ export default async function authRoutes(app) {
     },
   );
 
-  // ─── UPDATE PROFIL ──────────────────────────────────────────
   app.patch(
     "/me",
     {

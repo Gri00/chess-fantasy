@@ -10,7 +10,6 @@ import { liveService } from "../../services/live";
 import { C } from "../../constants/Colors";
 import { s } from "../../styles/tabs/index.styles";
 
-// ── Mock lineup data ──
 const MOCK_LINEUP = [
   { name: "Carlsen", piece: "♔", pts: 124, isCap: true },
   { name: "Pragg", piece: "♛", pts: 88, isCap: false },
@@ -22,9 +21,9 @@ function progCapMin(timeControl?: string | null): number {
   if (!timeControl) return 240;
   const base = parseInt(timeControl.split("+")[0], 10);
   if (isNaN(base)) return 240;
-  if (base >= 3600) return 240; // classical ≤ 4h
-  if (base >= 600) return 60; // rapid ≤ 1h
-  return 15; // blitz ≤ 15min
+  if (base >= 3600) return 240;
+  if (base >= 600) return 60;
+  return 15;
 }
 
 interface HomeLiveItem {
@@ -118,7 +117,6 @@ export default function HomeScreen() {
           }
         } catch {}
 
-        // Fallback: Lichess TV featured games (dedup by game ID)
         try {
           const { games } = await liveService.getLiveGames();
           const seen = new Set<string>();
@@ -168,7 +166,6 @@ export default function HomeScreen() {
       contentContainerStyle={[s.content, { paddingTop: insets.top + 12 }]}
       showsVerticalScrollIndicator={false}
     >
-      {/* ── Header ── */}
       <View style={s.header}>
         <View>
           <Text style={s.greeting}>{getGreeting()}</Text>
@@ -196,7 +193,6 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* ── Season banner ── */}
       <LinearGradient colors={["#1a0a3a", "#0a1a3a"]} style={s.banner}>
         <View style={s.bannerAbsPiece}>
           <Text style={{ fontSize: 80, color: C.gold, opacity: 0.07 }}>♔</Text>
@@ -221,7 +217,6 @@ export default function HomeScreen() {
         </View>
       </LinearGradient>
 
-      {/* ── Quick stats ── */}
       <View style={s.statsGrid}>
         {[
           { label: "Team Points", val: "2,847", icon: "🏅", color: C.gold },
@@ -241,7 +236,6 @@ export default function HomeScreen() {
         ))}
       </View>
 
-      {/* ── My Lineup ── */}
       <View style={s.section}>
         <View style={s.sectionHeader}>
           <Text style={s.sectionTitle}>My Lineup</Text>
@@ -267,7 +261,6 @@ export default function HomeScreen() {
         </ScrollView>
       </View>
 
-      {/* ── Live Now ── */}
       <View style={s.section}>
         <View style={s.sectionHeader}>
           <Text style={s.sectionTitle}>🔴 Live Now</Text>

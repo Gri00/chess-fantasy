@@ -82,7 +82,6 @@ export default function LeagueDetailScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Text style={styles.backText}>← Back</Text>
@@ -111,7 +110,6 @@ export default function LeagueDetailScreen() {
         )}
       </View>
 
-      {/* Invite kod */}
       {league?.invite_code && (
         <TouchableOpacity style={styles.inviteBanner} onPress={handleShare}>
           <Text style={styles.inviteLabel}>Invite Code</Text>
@@ -120,7 +118,6 @@ export default function LeagueDetailScreen() {
         </TouchableOpacity>
       )}
 
-      {/* Tabs */}
       <View style={styles.tabs}>
         {(["roster", "standings", "info"] as const).map((tab) => (
           <TouchableOpacity
@@ -157,7 +154,6 @@ export default function LeagueDetailScreen() {
           />
         }
       >
-        {/* ROSTER TAB */}
         {activeTab === "roster" && (
           <View>
             <View style={styles.sectionHeader}>
@@ -258,7 +254,6 @@ export default function LeagueDetailScreen() {
           </View>
         )}
 
-        {/* STANDINGS TAB */}
         {activeTab === "standings" && (
           <View>
             <Text style={styles.sectionTitle}>
@@ -295,7 +290,6 @@ export default function LeagueDetailScreen() {
                 <Text style={styles.emptyText}>No teams yet</Text>
               </View>
             ) : league?.status === "pending" ? (
-              // Prikaz timova dok liga nije počela
               league.members.map((member: any) => (
                 <TouchableOpacity
                   key={member.id}
@@ -383,7 +377,6 @@ export default function LeagueDetailScreen() {
           </View>
         )}
 
-        {/* INFO TAB */}
         {activeTab === "info" && (
           <View>
             <Text style={styles.sectionTitle}>League Details</Text>

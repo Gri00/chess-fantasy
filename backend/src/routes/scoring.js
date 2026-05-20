@@ -7,8 +7,6 @@ import {
 } from "../services/scoring.js";
 
 export default async function scoringRoutes(app) {
-  // ─── AKTIVIRAJ LIGU + KREIRAJ PERIODE ────────────────────────
-  // Samo komisar, liga mora imati season_start i season_end
   app.post(
     "/leagues/:id/activate",
     {
@@ -45,13 +43,11 @@ export default async function scoringRoutes(app) {
           .send({ error: "Set season_start and season_end before activation" });
       }
 
-      // Aktiviraj ligu
       await supabaseAdmin
         .from("leagues")
         .update({ status: "active" })
         .eq("id", id);
 
-      // Kreiraj nedeljne periode
       const periods = await createScoringPeriods(id);
 
       return reply.send({
@@ -62,7 +58,6 @@ export default async function scoringRoutes(app) {
     },
   );
 
-  // ─── POKRETANJE SCORING PERIODA (ručno ili cron) ─────────────
   app.post(
     "/leagues/:id/score/:period_id",
     {
@@ -93,7 +88,6 @@ export default async function scoringRoutes(app) {
     },
   );
 
-  // ─── DOHVATI SCOROVE ZA PERIOD ────────────────────────────────
   app.get(
     "/leagues/:id/scores",
     {
@@ -102,7 +96,7 @@ export default async function scoringRoutes(app) {
         querystring: {
           type: "object",
           properties: {
-            period: { type: "integer" }, // period_number, default = poslednji
+            period: { type: "integer" },
           },
         },
       },
@@ -111,7 +105,6 @@ export default async function scoringRoutes(app) {
       const { id } = request.params;
       const { period } = request.query;
 
-      // Provjeri članstvo
       const { data: membership } = await supabaseAdmin
         .from("league_members")
         .select("id")
@@ -125,7 +118,6 @@ export default async function scoringRoutes(app) {
           .send({ error: "You are not a member of this league" });
       }
 
-      // Nađi period
       let periodQuery = supabaseAdmin
         .from("scoring_periods")
         .select("*")
@@ -144,7 +136,6 @@ export default async function scoringRoutes(app) {
 
       const currentPeriod = periods[0];
 
-      // Dohvati scorove za ovaj period
       const { data: scores, error } = await supabaseAdmin
         .from("fantasy_scores")
         .select(
@@ -169,7 +160,6 @@ export default async function scoringRoutes(app) {
     },
   );
 
-  // ─── LISTA SVIH PERIODA ───────────────────────────────────────
   app.get(
     "/leagues/:id/periods",
     {
@@ -205,8 +195,6 @@ export default async function scoringRoutes(app) {
     },
   );
 
-  // ─── TEST ENDPOINT ────────────────────────────────────────────
-  // Dodaje fake performansu i odmah računa score — samo za development
   app.post(
     "/leagues/:id/test-score",
     {

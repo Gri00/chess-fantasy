@@ -4,7 +4,6 @@ import { getTopPlayers, getPlayer, searchPlayers } from "../services/chesscom.js
 
 export default async function playerRoutes(app) {
 
-  // ─── BROWSE IGRAČA (Lichess) ─────────────────────────────────────────────
   app.get(
     "/",
     {
@@ -33,12 +32,10 @@ export default async function playerRoutes(app) {
         players = await getTopPlayers();
       }
 
-      // Filter by tier
       if (tier) {
         players = players.filter(p => p.tier === tier);
       }
 
-      // Filter by search within the top-200 list (name/username match)
       if (search && search.length >= 2) {
         const q = search.toLowerCase();
         players = players.filter(
@@ -63,7 +60,6 @@ export default async function playerRoutes(app) {
     },
   );
 
-  // ─── DETALJI IGRAČA (Lichess) ────────────────────────────────────────────
   app.get(
     "/:username",
     { onRequest: [authenticate] },
@@ -79,8 +75,6 @@ export default async function playerRoutes(app) {
     },
   );
 
-  // ─── DOSTUPNI IGRAČI U LIGI ──────────────────────────────────────────────
-  // Keeps DB-based logic for league roster context
   app.get(
     "/available/:league_id",
     { onRequest: [authenticate] },
@@ -100,7 +94,6 @@ export default async function playerRoutes(app) {
         return reply.code(403).send({ error: "You are not a member of this league" });
       }
 
-      // Dohvati igrače koje user već ima
       const { data: myRoster } = await supabaseAdmin
         .from("rosters")
         .select("chess_player_id")
@@ -108,7 +101,6 @@ export default async function playerRoutes(app) {
 
       const draftedUsernames = myRoster ? myRoster.map(d => d.chess_player_id) : [];
 
-      // Fetch from Lichess and exclude already drafted
       let players = search && search.length >= 2
         ? await searchPlayers(search)
         : await getTopPlayers();
@@ -132,7 +124,6 @@ export default async function playerRoutes(app) {
     },
   );
 
-  // ─── ROSTER — DOHVATI TIM ────────────────────────────────────────────────
   app.get(
     "/roster/:league_id",
     { onRequest: [authenticate] },
@@ -167,7 +158,6 @@ export default async function playerRoutes(app) {
         return reply.code(500).send({ error: "Error fetching roster" });
       }
 
-      // Enrich with live Chess.com data where possible
       const enriched = await Promise.all(
         (roster ?? []).map(async entry => {
           if (!entry.chess_player_id) return entry;
@@ -180,8 +170,6 @@ export default async function playerRoutes(app) {
     },
   );
 
-  // ─── ROSTER — DODAJ IGRAČA ───────────────────────────────────────────────
-  // Accepts chess_username (Chess.com), auto-upserts into chess_players, then adds to roster
   app.post(
     "/roster/:league_id",
     {
@@ -224,13 +212,11 @@ export default async function playerRoutes(app) {
         return reply.code(400).send({ error: "Pick deadline has expired" });
       }
 
-      // Fetch from Chess.com to validate and get current data
       const chessPlayer = await getPlayer(chess_username);
       if (!chessPlayer) {
         return reply.code(404).send({ error: "Player not found on Chess.com" });
       }
 
-      // Upsert into chess_players table
       const { data: dbPlayer, error: upsertError } = await supabaseAdmin
         .from("chess_players")
         .upsert(
@@ -278,7 +264,6 @@ export default async function playerRoutes(app) {
     },
   );
 
-  // ─── ROSTER — UKLONI IGRAČA ──────────────────────────────────────────────
   app.delete(
     "/roster/:league_id/:chess_player_id",
     { onRequest: [authenticate] },

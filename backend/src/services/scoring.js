@@ -1,7 +1,5 @@
 import { supabaseAdmin } from "../services/supabase.js";
 
-// ─── DEFAULT SCORING PRAVILA ────────────────────────────────────
-// Ova vrednosti su fallback ako liga nema custom pravila
 const DEFAULT_RULES = {
   win_vs_higher: 6,
   win_vs_lower: 3,
@@ -18,7 +16,6 @@ const DEFAULT_RULES = {
   bullet_multiplier: 0.5,
 };
 
-// ─── IZRAČUNAJ POENE ZA JEDNOG IGRAČA NA JEDNOM TURNIRU ─────────
 export function calculatePlayerScore(
   performance,
   tournament,
@@ -28,45 +25,34 @@ export function calculatePlayerScore(
   let points = 0;
   const breakdown = {};
 
-  // Multiplier na osnovu time controla
   const multiplierKey = `${tournament.time_control}_multiplier`;
   const timeMultiplier = r[multiplierKey] ?? 1.0;
   const tournamentWeight = tournament.weight_multiplier ?? 1.0;
 
-  // Poeni za wins
-  // Napomena: u player_performances nemamo detalje po partiji
-  // (ko je bio higher/lower rated po partiji)
-  // Za MVP koristimo aproksimaciju: prosečan win = mix higher/lower
-  // Kad dodamo partiju-po-partiju sync, ovo postaje tačnije
   const winPoints = performance.wins * r.win_vs_lower;
   breakdown.wins = winPoints;
   points += winPoints;
 
-  // Poeni za draws
   const drawPoints = performance.draws * r.draw_vs_lower;
   breakdown.draws = drawPoints;
   points += drawPoints;
 
-  // Negativni poeni za losses
   const lossPoints = performance.losses * r.loss;
   breakdown.losses = lossPoints;
   points += lossPoints;
 
-  // Poeni za upset pobede
   if (performance.upsets_scored > 0) {
     const upsetPoints = performance.upsets_scored * r.upset_bonus;
     breakdown.upsets = upsetPoints;
     points += upsetPoints;
   }
 
-  // Poeni za rating gain
   if (performance.rating_change > 0) {
     const ratingPoints = performance.rating_change * r.rating_gain_per_point;
     breakdown.rating_gain = parseFloat(ratingPoints.toFixed(2));
     points += ratingPoints;
   }
 
-  // Bonus za turnirski plasman
   if (performance.final_rank === 1) {
     breakdown.tournament_win_bonus = r.tournament_win_bonus;
     points += r.tournament_win_bonus;
@@ -75,11 +61,9 @@ export function calculatePlayerScore(
     points += r.top3_bonus;
   }
 
-  // Primjeni time control multiplier
   points = points * timeMultiplier;
   breakdown.time_multiplier = timeMultiplier;
 
-  // Primjeni tournament weight (Candidates = 2.0, casual = 0.5)
   points = points * tournamentWeight;
   breakdown.tournament_weight = tournamentWeight;
 
@@ -89,11 +73,7 @@ export function calculatePlayerScore(
   };
 }
 
-// ─── IZRAČUNAJ POENE ZA CEO SCORING PERIOD ──────────────────────
 export async function processScoringPeriod(periodId) {
-  console.log(`[Scoring] Processing period ${periodId}...`);
-
-  // Dohvati period i ligu
   const { data: period, error: periodError } = await supabaseAdmin
     .from("scoring_periods")
     .select("*, league:leagues(id, scoring_rules, roster_size)")
@@ -105,26 +85,20 @@ export async function processScoringPeriod(periodId) {
   }
 
   if (period.is_finalized) {
-    console.log(
-      `[Scoring] Period ${periodId} is already finalized. Skipping processing.`,
-    );
     return;
   }
 
   const rules = period.league.scoring_rules;
 
-  // Dohvati sve članove lige
   const { data: members } = await supabaseAdmin
     .from("league_members")
     .select("id, user_id, team_name")
     .eq("league_id", period.league.id);
 
   if (!members || members.length === 0) {
-    console.log(`[Scoring] No members in league ${period.league.id}`);
     return;
   }
 
-  // Dohvati sve turnire u ovom periodu
   const { data: tournaments } = await supabaseAdmin
     .from("tournaments")
     .select("*")
@@ -133,18 +107,15 @@ export async function processScoringPeriod(periodId) {
     .eq("is_finished", true);
 
   if (!tournaments || tournaments.length === 0) {
-    console.log(`[Scoring] No finished tournaments in period ${periodId}`);
     return;
   }
 
   const tournamentIds = tournaments.map((t) => t.id);
   const tournamentMap = Object.fromEntries(tournaments.map((t) => [t.id, t]));
 
-  // Obradi svakog člana
   const scoreInserts = [];
 
   for (const member of members) {
-    // Dohvati roster ovog člana
     const { data: roster } = await supabaseAdmin
       .from("rosters")
       .select("chess_player_id")
@@ -154,7 +125,6 @@ export async function processScoringPeriod(periodId) {
 
     const playerIds = roster.map((r) => r.chess_player_id);
 
-    // Dohvati performanse za sve igrače u ovom periodu
     const { data: performances } = await supabaseAdmin
       .from("player_performances")
       .select("*")
@@ -163,7 +133,6 @@ export async function processScoringPeriod(periodId) {
 
     if (!performances || performances.length === 0) continue;
 
-    // Izračunaj poene po igraču
     for (const perf of performances) {
       const tournament = tournamentMap[perf.tournament_id];
       const { points, breakdown } = calculatePlayerScore(
@@ -182,10 +151,7 @@ export async function processScoringPeriod(periodId) {
     }
   }
 
-  if (scoreInserts.length === 0) {
-    console.log(`[Scoring] No scores to insert for period ${periodId}`);
-  } else {
-    // Upiši sve scorove odjednom
+  if (scoreInserts.length > 0) {
     const { error: insertError } = await supabaseAdmin
       .from("fantasy_scores")
       .upsert(scoreInserts, {
@@ -195,24 +161,16 @@ export async function processScoringPeriod(periodId) {
     if (insertError) {
       throw new Error(`Error inserting scores: ${insertError.message}`);
     }
-
-    console.log(
-      `[Scoring] Upisano ${scoreInserts.length} scorova za period ${periodId}`,
-    );
   }
 
-  // Finalizuj period
   await supabaseAdmin
     .from("scoring_periods")
     .update({ is_finalized: true, finalized_at: new Date().toISOString() })
     .eq("id", periodId);
 
-  console.log(`[Scoring] Period ${periodId} finalized.`);
   return { processed: scoreInserts.length };
 }
 
-// ─── KREIRAJ SCORING PERIODE ZA LIGU ────────────────────────────
-// Poziva se kad komisar aktivira ligu
 export async function createScoringPeriods(leagueId) {
   const { data: league } = await supabaseAdmin
     .from("leagues")
@@ -232,7 +190,6 @@ export async function createScoringPeriods(leagueId) {
   let current = new Date(start);
   let periodNumber = 1;
 
-  // Nedeljni periodi
   while (current < end) {
     const periodEnd = new Date(current);
     periodEnd.setDate(periodEnd.getDate() + 6);
@@ -256,16 +213,10 @@ export async function createScoringPeriods(leagueId) {
 
   if (error) throw new Error(`Error creating periods: ${error.message}`);
 
-  console.log(
-    `[Scoring] Created ${periods.length} periods for league ${leagueId}`,
-  );
   return data;
 }
 
-// ─── RUČNI TRIGGER ZA TESTIRANJE ────────────────────────────────
-// Dodaj test performansu i odmah izračunaj
 export async function addTestPerformanceAndScore(leagueId, chessPlayerId) {
-  // Nađi ili kreiraj test turnir
   let { data: tournament } = await supabaseAdmin
     .from("tournaments")
     .select("id")
@@ -291,7 +242,6 @@ export async function addTestPerformanceAndScore(leagueId, chessPlayerId) {
     tournament = newTournament;
   }
 
-  // Dodaj test performansu
   const { data: perf } = await supabaseAdmin
     .from("player_performances")
     .upsert(
@@ -313,6 +263,5 @@ export async function addTestPerformanceAndScore(leagueId, chessPlayerId) {
     .select()
     .single();
 
-  console.log("[Scoring] Test performance added:", perf);
   return { tournament, performance: perf };
 }

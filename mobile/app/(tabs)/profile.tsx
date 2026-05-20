@@ -53,7 +53,6 @@ export default function ProfileScreen() {
       contentContainerStyle={{ paddingBottom: insets.bottom }}
       showsVerticalScrollIndicator={false}
     >
-      {/* ── Hero banner ── */}
       <LinearGradient
         colors={["#1a0a3a", "#0a1020"]}
         style={[s.hero, { paddingTop: insets.top + 16 }]}
@@ -83,7 +82,6 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Season stats */}
         <View style={s.statsRow}>
           {[
             { label: "BEST RANK", val: "#12" },
@@ -98,7 +96,6 @@ export default function ProfileScreen() {
         </View>
       </LinearGradient>
 
-      {/* ── Achievements ── */}
       <View style={s.section}>
         <Text style={s.sectionTitle}>Achievements</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -119,7 +116,6 @@ export default function ProfileScreen() {
         </ScrollView>
       </View>
 
-      {/* ── Weekly points chart ── */}
       <View style={s.section}>
         <Text style={s.sectionTitle}>Weekly Points</Text>
         <View style={s.chartCard}>
@@ -155,7 +151,6 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {/* ── Settings ── */}
       <View style={s.section}>
         {SETTINGS.map((item, i) => (
           <TouchableOpacity key={i} style={s.settingRow} activeOpacity={0.7}>
@@ -170,7 +165,6 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         ))}
 
-        {/* Sign out */}
         <TouchableOpacity
           style={s.signOutRow}
           onPress={handleLogout}

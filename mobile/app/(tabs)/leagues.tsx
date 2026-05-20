@@ -211,7 +211,6 @@ export default function LeaguesScreen() {
         )}
       </ScrollView>
 
-      {/* Bottom actions */}
       <View
         style={[
           s.actions,
@@ -241,7 +240,6 @@ export default function LeaguesScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* ── Create Dialog ── */}
       <Modal visible={showCreate} animationType="fade" transparent>
         <TouchableOpacity
           style={[StyleSheet.absoluteFill, s.modalBackdrop]}
@@ -288,7 +286,6 @@ export default function LeaguesScreen() {
         </View>
       </Modal>
 
-      {/* ── Join Dialog ── */}
       <Modal visible={showJoin} animationType="fade" transparent>
         <TouchableOpacity
           style={[StyleSheet.absoluteFill, s.modalBackdrop]}

@@ -1,6 +1,5 @@
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
-import { Platform } from "react-native";
 import { api } from "./api";
 
 Notifications.setNotificationHandler({
@@ -15,7 +14,6 @@ Notifications.setNotificationHandler({
 
 export async function registerForPushNotifications(): Promise<string | null> {
   if (!Device.isDevice) {
-    console.log("Push notifikacije rade samo na pravom uređaju");
     return null;
   }
 
@@ -28,7 +26,6 @@ export async function registerForPushNotifications(): Promise<string | null> {
   }
 
   if (finalStatus !== "granted") {
-    console.log("Korisnik nije dao dozvolu za notifikacije");
     return null;
   }
 
@@ -38,22 +35,15 @@ export async function registerForPushNotifications(): Promise<string | null> {
     })
   ).data;
 
-  // Sačuvaj token u bazi
   try {
     await api.patch("/auth/me", { push_token: token });
-  } catch (err) {
-    console.error("Greška pri čuvanju push tokena:", err);
+  } catch {
   }
 
   return token;
 }
 
 export function useNotificationListeners() {
-  Notifications.addNotificationReceivedListener((notification) => {
-    console.log("Notifikacija primljena:", notification);
-  });
-
-  Notifications.addNotificationResponseReceivedListener((response) => {
-    console.log("Korisnik kliknuo notifikaciju:", response);
-  });
+  Notifications.addNotificationReceivedListener(() => {});
+  Notifications.addNotificationResponseReceivedListener(() => {});
 }

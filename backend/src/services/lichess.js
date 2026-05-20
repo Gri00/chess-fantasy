@@ -1,11 +1,7 @@
-// Lichess public API — live games only (players now come from Chess.com)
-// Rate limit: 300 req/min
-
 import { Chess } from "chess.js";
 
 const BASE = "https://lichess.org/api";
 
-//Cache
 const cache = new Map();
 
 function getCached(key) {
@@ -36,20 +32,10 @@ async function lichessFetch(path, opts = {}) {
   try {
     return JSON.parse(text);
   } catch {
-    // Lichess returned non-JSON (e.g. PGN text) despite Accept: application/json
-    console.warn(
-      `[lichess] non-JSON response for ${path}:`,
-      text.slice(0, 120),
-    );
     return null;
   }
 }
 
-//FEN from PGN moves
-/**
- * Computes current FEN by replaying all moves via chess.js.
- * Returns starting FEN if moves are empty or unparseable.
- */
 export function fenFromMoves(movesStr) {
   const chess = new Chess();
   if (!movesStr) return chess.fen();
@@ -58,14 +44,11 @@ export function fenFromMoves(movesStr) {
     try {
       chess.move(move);
     } catch {
-      // skip stray tokens (annotations, punctuation) rather than aborting
     }
   }
   return chess.fen();
 }
 
-//Live TV channels
-// API returns lowercase keys ('blitz', 'rapid', etc.)
 const MAIN_VARIANTS = new Set([
   "classical",
   "rapid",
@@ -86,7 +69,7 @@ export async function getLiveTVChannels() {
     .filter(([variant]) => MAIN_VARIANTS.has(variant.toLowerCase()))
     .map(([variant, game]) => ({
       id: game.gameId,
-      variant: variant.charAt(0).toUpperCase() + variant.slice(1), // normalise to "Blitz" etc.
+      variant: variant.charAt(0).toUpperCase() + variant.slice(1),
       player: {
         name: game.user?.name ?? "Unknown",
         id: game.user?.id ?? null,
@@ -100,8 +83,6 @@ export async function getLiveTVChannels() {
   setCache(key, games, 30 * 1000);
   return games;
 }
-
-//Broadcast PGN parser
 
 function evalToWinChance(evalStr) {
   if (!evalStr) return null;
@@ -130,12 +111,10 @@ function parseSinglePGN(pgn) {
   let m;
   while ((m = headerRe.exec(pgn)) !== null) headers[m[1]] = m[2];
 
-  // Extract last eval annotation before stripping (e.g. {[%eval 0.52]} or {[%eval #3]})
   const evalRe = /\[%eval\s+(#-?\d+|-?\d+(?:\.\d+)?)\]/g;
   let evalM, lastEvalStr = null;
   while ((evalM = evalRe.exec(pgn)) !== null) lastEvalStr = evalM[1];
 
-  // Extract clock annotations — they alternate white/black starting with white (index 0)
   const allClks = [];
   const clkRe2 = /\[%clk\s+(\d+:\d+:\d+)\]/g;
   let clkM2;
@@ -147,9 +126,6 @@ function parseSinglePGN(pgn) {
     black: blackClks[blackClks.length - 1] ?? null,
   } : null;
 
-  // Detect time control: prefer TimeControl header, fall back to first clock annotation.
-  // OTB broadcast PGNs often omit the TimeControl header, but always have %clk.
-  // The FIRST clock annotation is closest to the initial time, so we use it as a proxy.
   let timeControl = headers.TimeControl ?? null;
   if (!timeControl) {
     const firstClk = /\[%clk\s+(\d+):(\d+):(\d+)\]/.exec(pgn);
@@ -157,13 +133,10 @@ function parseSinglePGN(pgn) {
       const secs = parseInt(firstClk[1], 10) * 3600
                  + parseInt(firstClk[2], 10) * 60
                  + parseInt(firstClk[3], 10);
-      // Remaining time on move 1 is a reliable proxy for initial time
       timeControl = secs >= 1800 ? "7200+0" : "600+0";
     }
   }
 
-  // Strip all header tags first — avoids lastIndexOf("]") hitting clock annotations
-  // like {[%clk 1:30:00]} that also contain "]"
   let raw = pgn.replace(/\[\w+\s+"[^"]*"\]\s*/g, "").trim();
 
   raw = raw
@@ -220,16 +193,12 @@ function parseBroadcastPGN(text) {
     try {
       games.push(parseSinglePGN(trimmed));
     } catch {
-      /* skip */
     }
   }
   return games;
 }
 
-// roundId → full Lichess round URL (populated when listing broadcasts)
-const roundUrlCache = new Map()
-
-//Broadcasts API
+const roundUrlCache = new Map();
 
 export async function getOngoingBroadcasts() {
   const key = "broadcasts_active";
@@ -264,7 +233,6 @@ export async function getOngoingBroadcasts() {
         },
       });
     } catch {
-      /* skip */
     }
   }
   broadcasts.sort((a, b) => b.tier - a.tier);
@@ -273,26 +241,20 @@ export async function getOngoingBroadcasts() {
 }
 
 async function fetchBroadcastPGNText(roundId) {
-  // Primary: official API endpoint
   const apiRes = await fetch(`${BASE}/broadcast/round/${roundId}/games`, {
     headers: { Accept: "application/x-chess-pgn" },
   });
-  console.log(`[broadcast] API round ${roundId} → status ${apiRes.status}`);
   if (apiRes.ok) {
     const text = await apiRes.text();
     if (text.trim().startsWith("[")) return text;
-    console.warn(`[broadcast] API returned non-PGN for ${roundId}`);
   }
 
-  // Fallback: web URL + .pgn (works for rounds the API rejects)
   const roundUrl = roundUrlCache.get(roundId);
   if (roundUrl) {
     const webUrl = roundUrl.endsWith(".pgn") ? roundUrl : `${roundUrl}.pgn`;
-    console.log(`[broadcast] falling back to web PGN: ${webUrl}`);
     const webRes = await fetch(webUrl, {
       headers: { Accept: "application/x-chess-pgn, text/plain" },
     });
-    console.log(`[broadcast] web PGN ${roundId} → status ${webRes.status}`);
     if (webRes.ok) {
       const text = await webRes.text();
       if (text.trim().startsWith("[")) return text;
@@ -308,19 +270,13 @@ export async function getBroadcastGames(roundId) {
   if (cached) return cached;
 
   const text = await fetchBroadcastPGNText(roundId);
-  if (!text) {
-    console.warn(`[broadcast] no PGN available for round ${roundId}`);
-    return [];
-  }
+  if (!text) return [];
 
-  console.log(`[broadcast] PGN length: ${text.length}, first 200:\n${text.slice(0, 200)}`);
   const games = parseBroadcastPGN(text);
-  console.log(`[broadcast] parsed ${games.length} games for round ${roundId}`);
   setCache(key, games, 3000);
   return games;
 }
 
-//TV channel current game (fallback for broadcast games)
 export async function getChannelCurrentGame(channel) {
   const channelLower = channel.toLowerCase();
   const controller = new AbortController();
@@ -386,35 +342,25 @@ export async function getChannelCurrentGame(channel) {
     }
   } catch (err) {
     if (err.name !== "AbortError")
-      console.warn("[lichess] channel feed error:", err.message);
+      console.error("[lichess] channel feed error:", err.message);
   } finally {
     clearTimeout(timer);
   }
   return null;
 }
 
-//Game export
 export async function getGame(gameId) {
   const key = `game_${gameId}`;
   const cached = getCached(key);
   if (cached) return cached;
 
-  console.log(`[lichess] fetching game ${gameId}`);
   const data = await lichessFetch(
     `/game/export/${gameId}?moves=true&clocks=false&evals=false&opening=true`,
   );
 
-  if (!data) {
-    console.warn(`[lichess] game ${gameId} not found`);
-    return null;
-  }
-
-  console.log(
-    `[lichess] game ${gameId} status=${data.status} moves=${data.moves?.split(" ").length ?? 0}`,
-  );
+  if (!data) return null;
 
   const game = { ...data, fen: fenFromMoves(data.moves) };
-  // Cache briefly — still want live move updates to flow through
   const ttl = ["started", "created"].includes(data.status) ? 4000 : 60_000;
   setCache(key, game, ttl);
   return game;

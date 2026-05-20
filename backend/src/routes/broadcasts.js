@@ -5,7 +5,6 @@ import {
 } from "../services/lichess.js";
 
 export default async function broadcastRoutes(app) {
-  //Active broadcasts list
   app.get("/", { onRequest: [authenticate] }, async (_request, reply) => {
     try {
       const broadcasts = await getOngoingBroadcasts();
@@ -16,7 +15,6 @@ export default async function broadcastRoutes(app) {
     }
   });
 
-  //Games for a broadcast round
   app.get(
     "/:roundId/games",
     { onRequest: [authenticate] },
